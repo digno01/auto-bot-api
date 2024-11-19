@@ -1,0 +1,7 @@
+include:
+  - project: 'infraestrutura/Esteira_templates'
+    ref: main
+    file: 'deploy/deploy.yaml'
+variables:
+  APLICACAO: 'back'
+  NAMESPACE: 'mme-auth'

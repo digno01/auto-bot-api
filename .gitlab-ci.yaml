@@ -1,0 +1,8 @@
+include:
+  - project: 'infraestrutura/Esteira_templates'
+    ref: main
+    file: build/build-release.yaml
+variables:
+  CONTAINER_RELEASE_IMAGE: 'newgitlab.mme.gov.br:5050/desenvolvimento/mme-auth:back'
+  APLICACAO: 'back'
+  SECURITY: 'false'
