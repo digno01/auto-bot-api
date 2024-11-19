@@ -3,6 +3,8 @@ package br.com.auto.bot.auth.service;
 import br.com.auto.bot.auth.config.RendimentoConfig;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
+import lombok.AllArgsConstructor;
+import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -13,7 +15,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -46,7 +50,7 @@ public class RendimentoDiarioService {
     private double probabilidadeLucro;
 
     @Transactional
-    @Scheduled(cron = "0 55 2 * * *") // Executa todos os dias às 02:30
+    @Scheduled(cron = "0 06 3 * * *") // Executa todos os dias às 02:30
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 
@@ -78,38 +82,6 @@ public class RendimentoDiarioService {
         }
     }
 
-    @Transactional
-    public void processarRendimentoUsuario(User usuario, BigDecimal percentualDoDia) {
-        try {
-            BigDecimal saldoInvestido = usuario.getSaldoInvestido();
-            BigDecimal valorRendimento = saldoInvestido.multiply(percentualDoDia)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-            // Cria ou busca o investimento ativo do usuário
-            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
-
-            // Registra o rendimento principal
-            Rendimento rendimento = new Rendimento();
-            rendimento.setUsuario(usuario);
-            rendimento.setInvestimento(investimento); // Vincula o investimento
-            rendimento.setValorRendimento(valorRendimento);
-            rendimento.setTipoRendimento("I");
-            rendimento.setPercentualRendimento(percentualDoDia);
-            rendimentoRepository.save(rendimento);
-
-            // Atualiza saldo do usuário
-            usuario.setSaldoRendimentos(usuario.getSaldoRendimentos().add(valorRendimento));
-            userRepository.save(usuario);
-
-            // Processa rendimentos das indicações
-            processarRendimentosIndicacoes(usuario, valorRendimento, investimento);
-
-        } catch (Exception e) {
-            log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());
-            throw e;
-        }
-    }
-
     private Investimento buscarOuCriarInvestimentoAtivo(User usuario) {
         return investimentoRepository.findFirstByUsuarioAndStatusOrderByDataInicioDesc(usuario, "A")
                 .orElseGet(() -> {
@@ -121,32 +93,112 @@ public class RendimentoDiarioService {
                     return investimentoRepository.save(novoInvestimento);
                 });
     }
+    @Transactional
+    public void processarRendimentoUsuario(User usuario, BigDecimal percentualDoDia) {
+        try {
+            BigDecimal saldoInvestido = usuario.getSaldoInvestido();
 
-    private void processarRendimentosIndicacoes(User usuario, BigDecimal valorRendimentoPrincipal, Investimento investimento) {
-        List<Indicacao> indicacoes = indicacaoRepository.findByUsuarioIndicadorAndIsActiveTrue(usuario);
+            // Calcula o rendimento bruto
+            BigDecimal rendimentoBruto = saldoInvestido.multiply(percentualDoDia)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-        for (Indicacao indicacao : indicacoes) {
-            NivelIndicacao nivelIndicacao = nivelIndicacaoRepository
-                    .findByNivelAndIsActiveTrue(indicacao.getNivel())
-                    .orElseThrow(() -> new RuntimeException("Nível de indicação não encontrado"));
+            // Busca os indicadores do usuário (até 3 níveis acima)
+            List<NivelIndicador> niveisIndicadores = buscarIndicadoresAcima(usuario);
 
-            BigDecimal percentualNivel = nivelIndicacao.getPercentualRendimento();
-            BigDecimal valorRendimentoIndicacao = valorRendimentoPrincipal
+            // Calcula o valor a ser distribuído para os indicadores
+            BigDecimal valorTotalIndicadores = calcularValorParaIndicadores(rendimentoBruto, niveisIndicadores);
+
+            // O rendimento líquido do usuário é o rendimento bruto menos o valor dos indicadores
+            BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
+
+            // Cria ou busca o investimento ativo do usuário
+            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
+
+            // Registra o rendimento principal (líquido) do usuário
+            Rendimento rendimento = new Rendimento();
+            rendimento.setUsuario(usuario);
+            rendimento.setInvestimento(investimento);
+            rendimento.setValorRendimento(rendimentoLiquido);
+            rendimento.setTipoRendimento("I");
+            rendimento.setPercentualRendimento(percentualDoDia);
+            rendimentoRepository.save(rendimento);
+
+            // Atualiza saldo do usuário com o valor líquido
+            usuario.setSaldoRendimentos(usuario.getSaldoRendimentos().add(rendimentoLiquido));
+            userRepository.save(usuario);
+
+            // Distribui os rendimentos para os indicadores
+            distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
+
+        } catch (Exception e) {
+            log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());
+            throw e;
+        }
+    }
+
+    private List<NivelIndicador> buscarIndicadoresAcima(User usuario) {
+        List<NivelIndicador> indicadores = new ArrayList<>();
+        User usuarioAtual = usuario;
+        int nivelAtual = 1;
+
+        while (nivelAtual <= 3) {
+            Optional<Indicacao> indicacao = indicacaoRepository.findByUsuarioAndIsActiveTrue(usuarioAtual);
+            if (indicacao.isPresent()) {
+                User indicador = indicacao.get().getUsuarioIndicador();
+                NivelIndicacao nivelIndicacao = nivelIndicacaoRepository
+                        .findByNivelAndIsActiveTrue(nivelAtual)
+                        .orElseThrow(() -> new RuntimeException("Nível de indicação não encontrado"));
+
+                indicadores.add(new NivelIndicador(indicador, nivelIndicacao));
+                usuarioAtual = indicador;
+                nivelAtual++;
+            } else {
+                break;
+            }
+        }
+
+        return indicadores;
+    }
+
+    private BigDecimal calcularValorParaIndicadores(BigDecimal rendimentoBruto, List<NivelIndicador> indicadores) {
+        return indicadores.stream()
+                .map(ni -> rendimentoBruto.multiply(ni.getNivelIndicacao().getPercentualRendimento())
+                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private void distribuirRendimentosIndicadores(List<NivelIndicador> indicadores,
+                                                  BigDecimal rendimentoBruto,
+                                                  Investimento investimento) {
+        for (NivelIndicador ni : indicadores) {
+            BigDecimal percentualNivel = ni.getNivelIndicacao().getPercentualRendimento();
+            BigDecimal valorRendimentoIndicacao = rendimentoBruto
                     .multiply(percentualNivel)
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
+            // Registra o rendimento do indicador
             Rendimento rendimentoIndicacao = new Rendimento();
-            rendimentoIndicacao.setUsuario(indicacao.getUsuarioIndicador());
-            rendimentoIndicacao.setInvestimento(investimento); // Vincula o mesmo investimento
+            rendimentoIndicacao.setUsuario(ni.getIndicador());
+            rendimentoIndicacao.setInvestimento(investimento);
             rendimentoIndicacao.setValorRendimento(valorRendimentoIndicacao);
-            rendimentoIndicacao.setTipoRendimento("N" + indicacao.getNivel());
+            rendimentoIndicacao.setTipoRendimento("N" + ni.getNivelIndicacao().getNivel());
             rendimentoIndicacao.setPercentualRendimento(percentualNivel);
             rendimentoRepository.save(rendimentoIndicacao);
 
-            User indicador = indicacao.getUsuarioIndicador();
-            indicador.setSaldoRendimentos(indicador.getSaldoRendimentos().add(valorRendimentoIndicacao));
-            userRepository.save(indicador);
+            // Atualiza saldo do indicador
+            ni.getIndicador().setSaldoRendimentos(
+                    ni.getIndicador().getSaldoRendimentos().add(valorRendimentoIndicacao)
+            );
+            userRepository.save(ni.getIndicador());
         }
+    }
+
+    // Classe auxiliar para manter o indicador e seu nível juntos
+    @Data
+    @AllArgsConstructor
+    private static class NivelIndicador {
+        private User indicador;
+        private NivelIndicacao nivelIndicacao;
     }
 }
 
