@@ -98,6 +98,9 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
     private List<Saque> saques = new ArrayList<>();
 
+    @Column(name = "DS_CODIGO_INDICACAO", length = 8, unique = true)
+    private String codigoIndicacao;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return perfilAcesso.stream()
@@ -116,8 +119,17 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
         createdAt = LocalDateTime.now();
         setIsDeleted(false);
         setIsActive(true);
+        if (codigoIndicacao == null) {
+            setCodigoIndicacao(generateUniqueReferralCode());
+        }
+    }
 
-
+    private String generateUniqueReferralCode() {
+        return UUID.randomUUID()
+                .toString()
+                .replaceAll("-", "")
+                .substring(0, 8)
+                .toUpperCase();
     }
 
     @PreUpdate

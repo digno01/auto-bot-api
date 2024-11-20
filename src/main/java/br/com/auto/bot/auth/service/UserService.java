@@ -141,9 +141,9 @@ public class UserService extends GenericService<User, Long> {
         User user = this.repository.save(entity);
         contactService.saveOrUpdate(dto.getContato(), user);
 
-        // Se houver indicador, cria a indicação
-        if (dto.getIdIndicador() != null) {
-            criarIndicacao(user, dto.getIdIndicador());
+        // Modificado para usar código de indicação
+        if (StringUtils.isNotBlank(dto.getCodigoIndicacaoIndicador())) {
+            criarIndicacao(user, dto.getCodigoIndicacaoIndicador());
         }
 
         if (dto.getIsExterno()) {
@@ -154,10 +154,10 @@ public class UserService extends GenericService<User, Long> {
         return user;
     }
 
-    private void criarIndicacao(User usuario, Long idIndicador) {
+    private void criarIndicacao(User usuario, String codigoIndicacao) {
         try {
-            User indicador = repository.findById(idIndicador)
-                    .orElseThrow(() -> new RegistroNaoEncontradoException("Usuário indicador não encontrado"));
+            User indicador = repository.findByCodigoIndicacao(codigoIndicacao)
+                    .orElseThrow(() -> new RegistroNaoEncontradoException("Código de indicação não encontrado"));
 
             // Cria indicação direta (nível 1)
             Indicacao indicacaoNivel1 = new Indicacao();
@@ -192,7 +192,6 @@ public class UserService extends GenericService<User, Long> {
                 }
             }
         } catch (Exception e) {
-            // Loga o erro mas não impede o cadastro do usuário
             log.error("Erro ao criar indicações: " + e.getMessage());
         } catch (RegistroNaoEncontradoException e) {
             throw new RuntimeException(e);

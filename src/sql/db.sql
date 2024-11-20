@@ -65,10 +65,14 @@ CREATE TABLE tb_usuario (
                             vl_saldo_disponivel numeric(15, 2) NOT NULL DEFAULT 0,
                             vl_saldo_investido numeric(15, 2) NOT NULL DEFAULT 0,
                             vl_saldo_rendimentos numeric(15, 2) NOT NULL DEFAULT 0,
+                            ds_codigo_indicacao varchar(8) NOT NULL,
+                            CONSTRAINT tb_usuario_pkey PRIMARY KEY (pk_usuario),
                             CONSTRAINT tb_usuario_cpf_unique UNIQUE (nu_cpf),
                             CONSTRAINT tb_usuario_email_unique UNIQUE (ds_email),
-                            CONSTRAINT tb_usuario_pkey PRIMARY KEY (pk_usuario)
+                            CONSTRAINT tb_usuario_codigo_indicacao_unique UNIQUE (ds_codigo_indicacao)
 );
+
+CREATE INDEX idx_usuario_codigo_indicacao ON tb_usuario(ds_codigo_indicacao);
 
 
 -- public.tb_contato definition

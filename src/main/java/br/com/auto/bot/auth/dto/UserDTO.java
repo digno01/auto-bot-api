@@ -54,8 +54,10 @@ public class UserDTO extends LoginDTO {
 //    @NotNull
     private Boolean isExterno;
 
-    @Schema(description = "ID do usuário que fez a indicação", example = "1234")
-    private Long idIndicador;
 
+    @Schema(description = "ID do usuário que fez a indicação", example = "1234")
+    private String codigoIndicacaoIndicador; // Código de quem está indicando
+
+    private String codigoIndicacao; // Código do usuário (gerado automaticamente)
 
 }

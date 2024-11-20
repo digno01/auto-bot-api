@@ -26,4 +26,6 @@ public interface UserRepository  extends GenericEntityDeletedRepository<User, Lo
     Page<User> findAllByIsDeletedFalseAndHasPerfilAcesso(Pageable pageable);
 
     List<User>  findByIsActiveTrueAndSaldoInvestidoGreaterThan(BigDecimal saldo);
+
+    Optional<User> findByCodigoIndicacao(String codigoIndicacao);
 }

@@ -1,6 +1,5 @@
 package br.com.auto.bot.auth.service;
 
-import br.com.auto.bot.auth.config.RendimentoConfig;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
 import lombok.AllArgsConstructor;
