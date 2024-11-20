@@ -1,5 +1,7 @@
 package br.com.auto.bot.auth.model;
 
+import br.com.auto.bot.auth.converter.TipoRendimentoConverter;
+import br.com.auto.bot.auth.enums.TipoRendimento;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -23,7 +25,7 @@ public class Rendimento implements Serializable {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PK_INVESTIMENTO", nullable = true) // Permite null
+    @JoinColumn(name = "PK_INVESTIMENTO")
     private Investimento investimento;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -37,14 +39,17 @@ public class Rendimento implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataRendimento;
 
-    @Column(name = "TP_RENDIMENTO")
-    private String tipoRendimento;
+    @Column(name = "TP_RENDIMENTO", length = 1)
+    @Convert(converter = TipoRendimentoConverter.class)
+    private TipoRendimento tipoRendimento;
 
     @Column(name = "PC_RENDIMENTO")
-    private BigDecimal percentualRendimento;  // Nova coluna
+    private BigDecimal percentualRendimento;
 
     @PrePersist
     protected void onCreate() {
         dataRendimento = LocalDateTime.now();
     }
 }
+
+

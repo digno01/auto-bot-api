@@ -3,7 +3,7 @@ package br.com.auto.bot.auth.controller;
 import br.com.auto.bot.auth.dto.LoginDTO;
 import br.com.auto.bot.auth.dto.MessageDTO;
 import br.com.auto.bot.auth.dto.UpdatePasswordDTO;
-import br.com.auto.bot.auth.exceptions.BusinessException;
+import br.com.auto.bot.auth.exceptions.BussinessException;
 import br.com.auto.bot.auth.exceptions.RegistroDuplicadoException;
 import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
 import br.com.auto.bot.auth.responses.LoginResponse;
@@ -98,7 +98,7 @@ public class AuthenticationController {
 
 
     @GetMapping(path = "/recovery-password", produces = { MediaType.APPLICATION_JSON_VALUE })
-    public ResponseEntity recoveryPassword(@RequestParam(value = "email",required = true) String email, HttpServletRequest request) throws RegistroNaoEncontradoException, BusinessException {
+    public ResponseEntity recoveryPassword(@RequestParam(value = "email",required = true) String email, HttpServletRequest request) throws RegistroNaoEncontradoException, BussinessException {
         String ipAddress = getClientIp(request); // Obtém o IP do cliente
         serviceBean.recoverPassword(email, ipAddress);
         return ResponseEntity.ok().build();

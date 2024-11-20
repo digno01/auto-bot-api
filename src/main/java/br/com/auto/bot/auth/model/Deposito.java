@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.model;
 
+import br.com.auto.bot.auth.enums.StatusDeposito;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -33,11 +34,10 @@ public class Deposito implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataDeposito;
 
-    @Column(name = "ST_DEPOSITO")
-    private String status;
+    @Column(name = "ST_DEPOSITO", length = 1)
+    @Enumerated(EnumType.STRING)
+    private StatusDeposito status;
 
-    @Column(name = "DS_COMPROVANTE")
-    private String comprovante;
 
     @Column(name = "DT_APROVACAO")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
@@ -46,5 +46,8 @@ public class Deposito implements Serializable {
     @PrePersist
     protected void onCreate() {
         dataDeposito = LocalDateTime.now();
+        if (status == null) {
+            status = StatusDeposito.P;
+        }
     }
 }

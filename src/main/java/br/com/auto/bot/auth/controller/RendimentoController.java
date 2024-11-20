@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.controller;
 
+import br.com.auto.bot.auth.enums.TipoRendimento;
 import br.com.auto.bot.auth.model.Rendimento;
 import br.com.auto.bot.auth.repository.RendimentoRepository;
 import lombok.extern.slf4j.Slf4j;
@@ -14,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rendimentos")
@@ -57,19 +59,41 @@ public class RendimentoController {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalInvestimentos = rendimentos.stream()
-                .filter(r -> "I".equals(r.getTipoRendimento()))
+                .filter(r -> TipoRendimento.I.equals(r.getTipoRendimento()))
                 .map(Rendimento::getValorRendimento)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         BigDecimal totalIndicacoes = rendimentos.stream()
-                .filter(r -> r.getTipoRendimento().startsWith("N"))
+                .filter(r -> isRendimentoIndicacao(r.getTipoRendimento()))
                 .map(Rendimento::getValorRendimento)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        // Calculando rendimentos por nível de indicação
+        Map<TipoRendimento, BigDecimal> rendimentosPorNivel = rendimentos.stream()
+                .filter(r -> isRendimentoIndicacao(r.getTipoRendimento()))
+                .collect(Collectors.groupingBy(
+                        Rendimento::getTipoRendimento,
+                        Collectors.reducing(BigDecimal.ZERO,
+                                Rendimento::getValorRendimento,
+                                BigDecimal::add)
+                ));
 
         resumo.put("totalRendimentos", totalRendimentos);
         resumo.put("rendimentosInvestimentos", totalInvestimentos);
         resumo.put("rendimentosIndicacoes", totalIndicacoes);
 
+        // Adicionando rendimentos por nível
+        rendimentosPorNivel.forEach((tipo, valor) ->
+                resumo.put("rendimentosNivel" + tipo.name().substring(1), valor)
+        );
+
         return ResponseEntity.ok(resumo);
     }
+
+    private boolean isRendimentoIndicacao(TipoRendimento tipo) {
+        return tipo == TipoRendimento.N1 ||
+                tipo == TipoRendimento.N2 ||
+                tipo == TipoRendimento.N3;
+    }
+
 }

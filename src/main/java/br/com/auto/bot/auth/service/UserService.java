@@ -146,11 +146,11 @@ public class UserService extends GenericService<User, Long> {
             criarIndicacao(user, dto.getCodigoIndicacaoIndicador());
         }
 
-        if (dto.getIsExterno()) {
-            emailService.envioEmailAtivacaoConta(user);
-        } else {
-            emailService.enviarEmailComSenha(dto);
-        }
+//        if (dto.getIsExterno()) {
+//            emailService.envioEmailAtivacaoConta(user);
+//        } else {
+//            emailService.enviarEmailComSenha(dto);
+//        }
         return user;
     }
 
@@ -203,7 +203,7 @@ public class UserService extends GenericService<User, Long> {
     public PerfilAcesso buscarPerfil(Long idPerfil) {
         Optional<PerfilAcesso> perfilVinculadoAoSistema = perfilAcessoService.findById( idPerfil);
         if (perfilVinculadoAoSistema.isEmpty()) {
-            throw new BusinessException(messageSource.getMessage("ME035", null, null));
+            throw new BussinessException(messageSource.getMessage("ME035", null, null));
         }
         return perfilVinculadoAoSistema.get();
     }
@@ -247,15 +247,15 @@ public class UserService extends GenericService<User, Long> {
         try {
             authenticateUser(input);
         } catch (Exception e) {
-            throw new BusinessException(messageSource.getMessage("ME003", null, null));
+            throw new BussinessException(messageSource.getMessage("ME003", null, null));
         }
         User user = findUserByEmail(input.getEmail());
 
         if (Boolean.FALSE.equals(isSenhaIgualUserPassword(user, input.getPassword()))) {
-            throw new BusinessException(messageSource.getMessage("ME003", null, null));
+            throw new BussinessException(messageSource.getMessage("ME003", null, null));
         }
         if (Boolean.FALSE.equals(user.getIsActive())) {
-            throw new BusinessException(messageSource.getMessage("ME034", null, null));
+            throw new BussinessException(messageSource.getMessage("ME034", null, null));
         }
         validateUserForPasswordRecovery(user);
 
@@ -281,7 +281,7 @@ public class UserService extends GenericService<User, Long> {
 
     protected void validateUserForPasswordRecovery(User user) {
         if (user.getQuantidadeTentativasRecupSenha() > 0 && StringUtils.isNotEmpty(user.getToken())) {
-            throw new BusinessException(messageSource.getMessage("ME033", null, null));
+            throw new BussinessException(messageSource.getMessage("ME033", null, null));
         }
     }
 
@@ -318,7 +318,7 @@ public class UserService extends GenericService<User, Long> {
     }
 
 
-    public void recoverPassword(String email, String ipAddress) throws RegistroNaoEncontradoException, BusinessException {
+    public void recoverPassword(String email, String ipAddress) throws RegistroNaoEncontradoException, BussinessException {
         User user = repository.findByEmail(email)
                 .orElseThrow(() -> new RegistroNaoEncontradoException(messageSource.getMessage("ME031", null, null)));
 
@@ -339,11 +339,11 @@ public class UserService extends GenericService<User, Long> {
     }
 
 
-    protected void controlarNumeroTentativasRecuperarSenha(User user) throws BusinessException {
+    protected void controlarNumeroTentativasRecuperarSenha(User user) throws BussinessException {
         // Verifique se o usuário foi bloqueado
         if (user.getQuantidadeTentativasRecupSenha() >= 3) {
             if (user.getDtUltimaTentativaRecupSenha() != null && user.getDtUltimaTentativaRecupSenha().plusMinutes(10).isAfter(LocalDateTime.now())) {
-                throw new BusinessException(messageSource.getMessage("ME030", null, null));
+                throw new BussinessException(messageSource.getMessage("ME030", null, null));
             } else {
                 // Resetar tentativas após 10 minutos
                 user.setQuantidadeTentativasRecupSenha(1);
@@ -354,7 +354,7 @@ public class UserService extends GenericService<User, Long> {
     }
 
 
-    public void atualizarSenha(UpdatePasswordDTO atualizarSenhaDTO, String ipAddress) throws BusinessException {
+    public void atualizarSenha(UpdatePasswordDTO atualizarSenhaDTO, String ipAddress) throws BussinessException {
         String token = atualizarSenhaDTO.getToken();
         String novaSenha = atualizarSenhaDTO.getNewPassword();
 
@@ -365,7 +365,7 @@ public class UserService extends GenericService<User, Long> {
             validarTokenAlterarSenha(token, usuario);
             validarTokenERegistrarTentativa(token, usuario, ipAddress);
             if (isSenhaIgualUserPassword(usuario, novaSenha)) {
-                throw new BusinessException(messageSource.getMessage(AuthMessageCode.SENHA_DEVE_SER_DIFERENTE_ANTERIOR.getCode(), null, null));
+                throw new BussinessException(messageSource.getMessage(AuthMessageCode.SENHA_DEVE_SER_DIFERENTE_ANTERIOR.getCode(), null, null));
             }
             // Atualiza a senha do usuário e limpa o token
             atualizarSenhaDoUsuario(usuario, novaSenha);
@@ -377,7 +377,7 @@ public class UserService extends GenericService<User, Long> {
 
     protected void validarTokenAlterarSenha(String token, User usuario) {
         if (usuario.getToken() == null || !token.equals(usuario.getToken())) {
-            throw new BusinessException(messageSource.getMessage(AuthMessageCode.ERROR_TOKEN_INVALID.getCode(), null, null));
+            throw new BussinessException(messageSource.getMessage(AuthMessageCode.ERROR_TOKEN_INVALID.getCode(), null, null));
         }
     }
 
@@ -392,12 +392,12 @@ public class UserService extends GenericService<User, Long> {
         emailService.enviaEmailSenhaALteradaSucesso(usuario);
     }
 
-    private User encontrarUsuarioPorEmail(String email) throws BusinessException {
+    private User encontrarUsuarioPorEmail(String email) throws BussinessException {
         return repository.findByEmail(email)
-                .orElseThrow(() -> new BusinessException(messageSource.getMessage(AuthMessageCode.ERROR_TOKEN_INVALID.getCode(), null, null)));
+                .orElseThrow(() -> new BussinessException(messageSource.getMessage(AuthMessageCode.ERROR_TOKEN_INVALID.getCode(), null, null)));
     }
 
-    protected void validarTokenERegistrarTentativa(String token, User usuario, String ipAddress) throws BusinessException {
+    protected void validarTokenERegistrarTentativa(String token, User usuario, String ipAddress) throws BussinessException {
         if (jwtService.isTokenExpired(token)) {
             controlarNumeroTentativasRecuperarSenha(usuario);
             throw new TokenExpiredException("Token expirado");
@@ -411,9 +411,9 @@ public class UserService extends GenericService<User, Long> {
         repository.save(usuario);
     }
 
-    protected void validarEmailDoToken(String email) throws BusinessException {
+    protected void validarEmailDoToken(String email) throws BussinessException {
         if (email == null) {
-            throw new BusinessException((messageSource.getMessage(AuthMessageCode.ERROR_TOKEN_INVALID.getCode(), null, null)));
+            throw new BussinessException((messageSource.getMessage(AuthMessageCode.ERROR_TOKEN_INVALID.getCode(), null, null)));
         }
     }
 

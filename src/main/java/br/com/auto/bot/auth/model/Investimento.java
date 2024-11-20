@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.model;
 
+import br.com.auto.bot.auth.enums.StatusInvestimento;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -39,8 +40,19 @@ public class Investimento implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataFim;
 
-    @Column(name = "ST_INVESTIMENTO")
-    private String status;
+    @Column(name = "ST_INVESTIMENTO", length = 1)
+    @Enumerated(EnumType.STRING)
+    private StatusInvestimento status;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PK_ROBO_INVESTIDOR")
+    private RoboInvestidor roboInvestidor;
+
+    @Column(name = "VL_ULTIMO_RENDIMENTO")
+    private BigDecimal valorUltimoRendimento;
+
+    @Column(name = "IS_ULTIMO_RENDIMENTO_LOSS")
+    private Boolean isUltimoRendimentoLoss;
 
     @PrePersist
     protected void onCreate() {

@@ -1,15 +1,15 @@
 package br.com.auto.bot.auth.controller;
 
-import br.com.auto.bot.auth.exceptions.BusinessException;
-import br.com.auto.bot.auth.exceptions.RegistroDuplicadoException;
-import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
+import br.com.auto.bot.auth.exceptions.BussinessException;
 import br.com.auto.bot.auth.model.error.ErrorHandleDTO;
 import br.com.auto.bot.auth.model.error.MessageDTO;
 import com.google.gson.Gson;
 import io.jsonwebtoken.ExpiredJwtException;
+import jakarta.validation.UnexpectedTypeException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -38,26 +38,27 @@ public class RestAdviceException {
         return listError;
     }
 
-    @ExceptionHandler(RegistroDuplicadoException.class)
+    @ExceptionHandler(UnexpectedTypeException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public List<ErrorHandleDTO> handleResgistroDuplicadoEncontrado(RegistroDuplicadoException e) {
-        Gson gson = new Gson();
-        return List.of(gson.fromJson(e.getMessage(), ErrorHandleDTO[].class));
+    public List<ErrorHandleDTO> handleCamposInvalidos(UnexpectedTypeException e) {
+        return  List.of(new ErrorHandleDTO("invalido", "Formulario contém erros reveja os campos informados"));
     }
 
 
-    @ExceptionHandler(RegistroNaoEncontradoException.class)
+    @ExceptionHandler(HttpMessageNotReadableException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public MessageDTO handleRegistroNaoEncontrado(RegistroNaoEncontradoException e) {
-        return new MessageDTO(e.getMessage());
-
+    public ErrorHandleDTO handleCamposInvalidos(HttpMessageNotReadableException e) {
+        return new ErrorHandleDTO(e.getMessage());
     }
 
-    @ExceptionHandler(BusinessException.class)
+
+    @ExceptionHandler(BussinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public MessageDTO handleBusinessException(BusinessException e) {
-        return new MessageDTO(e.getMessage());
+    public MessageDTO handleBusinessException(BussinessException e) {
+        return new MessageDTO(e.getMessage().toString());
     }
+
+
 
     @ExceptionHandler(ExpiredJwtException.class)
     @ResponseStatus(HttpStatus.UNAUTHORIZED)
@@ -65,6 +66,15 @@ public class RestAdviceException {
         return new MessageDTO(e.getMessage());
     }
 
+    @ExceptionHandler(RuntimeException.class)
+    public MessageDTO handleRuntimeException(RuntimeException e) {
+        return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler(Exception.class)
+    public MessageDTO handleRuntimeException(Exception e) {
+        return new MessageDTO(e.getMessage());
+    }
 
 
 }

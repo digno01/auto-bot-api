@@ -1,5 +1,7 @@
 package br.com.auto.bot.auth.service;
 
+import br.com.auto.bot.auth.enums.StatusInvestimento;
+import br.com.auto.bot.auth.enums.TipoRendimento;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
 import lombok.AllArgsConstructor;
@@ -49,7 +51,8 @@ public class RendimentoDiarioService {
     private double probabilidadeLucro;
 
     @Transactional
-    @Scheduled(cron = "0 06 3 * * *") // Executa todos os dias às 02:30
+    //@Scheduled(cron = "0 06 3 * * *") // Executa todos os dias às 02:30
+    @Scheduled(cron = "0 */1 * * * *")
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 
@@ -57,19 +60,20 @@ public class RendimentoDiarioService {
             // Determina se hoje será lucro ou prejuízo para todos
             boolean isLucro = Math.random() < probabilidadeLucro;
 
-            // Calcula o percentual do dia
-            double percentualDoDia = isLucro ?
-                    percentualMinLucro + (Math.random() * (percentualMaxLucro - percentualMinLucro)) :
-                    percentualPrejuizo;
 
-            log.info("Resultado do dia: {} - Percentual: {:.2f}%",
-                    isLucro ? "LUCRO" : "PREJUÍZO",
-                    percentualDoDia);
+//            log.info("Resultado do dia: {} - Percentual: {:.2f}%",
+//                    isLucro ? "LUCRO" : "PREJUÍZO",
+//                    percentualDoDia);
 
             // Busca todos os usuários ativos com saldo investido
             List<User> usuarios = userRepository.findByIsActiveTrueAndSaldoInvestidoGreaterThan(BigDecimal.ZERO);
 
             for (User usuario : usuarios) {
+
+                // Calcula o percentual do dia
+                double percentualDoDia = isLucro ?
+                        percentualMinLucro + (Math.random() * (percentualMaxLucro - percentualMinLucro)) :
+                        percentualPrejuizo;
                 processarRendimentoUsuario(usuario, BigDecimal.valueOf(percentualDoDia));
             }
 
@@ -82,24 +86,68 @@ public class RendimentoDiarioService {
     }
 
     private Investimento buscarOuCriarInvestimentoAtivo(User usuario) {
-        return investimentoRepository.findFirstByUsuarioAndStatusOrderByDataInicioDesc(usuario, "A")
+        return investimentoRepository.findFirstByUsuarioAndStatusOrderByDataInicioDesc(usuario, StatusInvestimento.A)
                 .orElseGet(() -> {
                     Investimento novoInvestimento = new Investimento();
                     novoInvestimento.setUsuario(usuario);
                     novoInvestimento.setValorInvestido(usuario.getSaldoInvestido());
-                    novoInvestimento.setStatus("A"); // Ativo
+                    novoInvestimento.setStatus(StatusInvestimento.A);
                     novoInvestimento.setDataInicio(LocalDateTime.now());
                     return investimentoRepository.save(novoInvestimento);
                 });
     }
+
+    private BigDecimal ajustarPercentualRendimento(
+            BigDecimal percentualBase,
+            Boolean isUltimoLoss,
+            BigDecimal valorUltimoRendimento) {
+
+        if (isUltimoLoss != null && isUltimoLoss) {
+            BigDecimal percentualLossAnterior = valorUltimoRendimento
+                    .abs()
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            return percentualBase.add(percentualLossAnterior.divide(BigDecimal.valueOf(2)));
+        }
+
+        return percentualBase;
+    }
+
+    private BigDecimal limitarPercentualRobo(BigDecimal percentual, RoboInvestidor robo) {
+        if (percentual.compareTo(robo.getPercentualRendimentoMin()) < 0) {
+            return robo.getPercentualRendimentoMin();
+        }
+        if (percentual.compareTo(robo.getPercentualRendimentoMax()) > 0) {
+            return robo.getPercentualRendimentoMax();
+        }
+        return percentual;
+    }
+
     @Transactional
     public void processarRendimentoUsuario(User usuario, BigDecimal percentualDoDia) {
         try {
+            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
+            RoboInvestidor robo = investimento.getRoboInvestidor();
+
+            // Ajusta percentual baseado no histórico de loss
+            BigDecimal percentualAjustado = ajustarPercentualRendimento(
+                    percentualDoDia,
+                    investimento.getIsUltimoRendimentoLoss(),
+                    investimento.getValorUltimoRendimento()
+            );
+
+            // Valida se está dentro dos limites do robô
+            percentualAjustado = limitarPercentualRobo(percentualAjustado, robo);
+
             BigDecimal saldoInvestido = usuario.getSaldoInvestido();
 
             // Calcula o rendimento bruto
             BigDecimal rendimentoBruto = saldoInvestido.multiply(percentualDoDia)
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            // Salva histórico do rendimento
+            investimento.setValorUltimoRendimento(rendimentoBruto);
+            investimento.setIsUltimoRendimentoLoss(rendimentoBruto.compareTo(BigDecimal.ZERO) < 0);
 
             // Busca os indicadores do usuário (até 3 níveis acima)
             List<NivelIndicador> niveisIndicadores = buscarIndicadoresAcima(usuario);
@@ -110,15 +158,12 @@ public class RendimentoDiarioService {
             // O rendimento líquido do usuário é o rendimento bruto menos o valor dos indicadores
             BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
 
-            // Cria ou busca o investimento ativo do usuário
-            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
-
             // Registra o rendimento principal (líquido) do usuário
             Rendimento rendimento = new Rendimento();
             rendimento.setUsuario(usuario);
             rendimento.setInvestimento(investimento);
             rendimento.setValorRendimento(rendimentoLiquido);
-            rendimento.setTipoRendimento("I");
+            rendimento.setTipoRendimento(TipoRendimento.I);
             rendimento.setPercentualRendimento(percentualDoDia);
             rendimentoRepository.save(rendimento);
 
@@ -166,9 +211,10 @@ public class RendimentoDiarioService {
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
-    private void distribuirRendimentosIndicadores(List<NivelIndicador> indicadores,
-                                                  BigDecimal rendimentoBruto,
-                                                  Investimento investimento) {
+    private void distribuirRendimentosIndicadores(
+            List<NivelIndicador> indicadores,
+            BigDecimal rendimentoBruto,
+            Investimento investimento) {
         for (NivelIndicador ni : indicadores) {
             BigDecimal percentualNivel = ni.getNivelIndicacao().getPercentualRendimento();
             BigDecimal valorRendimentoIndicacao = rendimentoBruto
@@ -180,7 +226,7 @@ public class RendimentoDiarioService {
             rendimentoIndicacao.setUsuario(ni.getIndicador());
             rendimentoIndicacao.setInvestimento(investimento);
             rendimentoIndicacao.setValorRendimento(valorRendimentoIndicacao);
-            rendimentoIndicacao.setTipoRendimento("N" + ni.getNivelIndicacao().getNivel());
+            rendimentoIndicacao.setTipoRendimento(getTipoRendimentoPorNivel(ni.getNivelIndicacao().getNivel()));
             rendimentoIndicacao.setPercentualRendimento(percentualNivel);
             rendimentoRepository.save(rendimentoIndicacao);
 
@@ -192,6 +238,15 @@ public class RendimentoDiarioService {
         }
     }
 
+
+    private TipoRendimento getTipoRendimentoPorNivel(Integer nivel) {
+        switch (nivel) {
+            case 1: return TipoRendimento.N1;
+            case 2: return TipoRendimento.N2;
+            case 3: return TipoRendimento.N3;
+            default: throw new IllegalArgumentException("Nível de indicação inválido: " + nivel);
+        }
+    }
     // Classe auxiliar para manter o indicador e seu nível juntos
     @Data
     @AllArgsConstructor

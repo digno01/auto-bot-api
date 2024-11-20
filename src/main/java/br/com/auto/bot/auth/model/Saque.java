@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.model;
 
+import br.com.auto.bot.auth.enums.StatusSaque;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -25,6 +26,10 @@ public class Saque implements Serializable {
     @JoinColumn(name = "PK_USUARIO")
     private User usuario;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PK_INVESTIMENTO")
+    private Investimento investimento;
+
     @Column(name = "VL_SAQUE")
     private BigDecimal valorSaque;
 
@@ -36,8 +41,9 @@ public class Saque implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataProcessamento;
 
-    @Column(name = "ST_SAQUE")
-    private String status;
+    @Column(name = "ST_SAQUE", length = 1)
+    @Enumerated(EnumType.STRING)
+    private StatusSaque status;
 
     @Column(name = "DS_DADOS_BANCARIOS")
     private String dadosBancarios;
@@ -45,5 +51,8 @@ public class Saque implements Serializable {
     @PrePersist
     protected void onCreate() {
         dataSolicitacao = LocalDateTime.now();
+        if (status == null) {
+            status = StatusSaque.P;
+        }
     }
 }
