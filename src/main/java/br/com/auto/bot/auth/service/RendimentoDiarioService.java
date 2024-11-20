@@ -129,36 +129,42 @@ public class RendimentoDiarioService {
             Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
             RoboInvestidor robo = investimento.getRoboInvestidor();
 
-            // Ajusta percentual baseado no histórico de loss
             BigDecimal percentualAjustado = ajustarPercentualRendimento(
                     percentualDoDia,
                     investimento.getIsUltimoRendimentoLoss(),
                     investimento.getValorUltimoRendimento()
             );
 
-            // Valida se está dentro dos limites do robô
             percentualAjustado = limitarPercentualRobo(percentualAjustado, robo);
 
             BigDecimal saldoInvestido = usuario.getSaldoInvestido();
+            BigDecimal saldoRendimentos = usuario.getSaldoRendimentos();
 
             // Calcula o rendimento bruto
             BigDecimal rendimentoBruto = saldoInvestido.multiply(percentualDoDia)
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-            // Salva histórico do rendimento
+            // Verifica se o rendimento é negativo
+            if (rendimentoBruto.compareTo(BigDecimal.ZERO) < 0) {
+                // Calcula o saldo efetivo (investido - rendimentos negativos)
+                BigDecimal saldoEfetivo = saldoInvestido.add(saldoRendimentos);
+
+                // Se o saldo efetivo for zero ou negativo, liquida o investimento
+                if (saldoEfetivo.compareTo(BigDecimal.ZERO) <= 0) {
+                    liquidarInvestimento(usuario, investimento, saldoEfetivo);
+                    return;
+                }
+            }
+
+            // Continua com o processamento normal se não houve liquidação
             investimento.setValorUltimoRendimento(rendimentoBruto);
             investimento.setIsUltimoRendimentoLoss(rendimentoBruto.compareTo(BigDecimal.ZERO) < 0);
 
-            // Busca os indicadores do usuário (até 3 níveis acima)
             List<NivelIndicador> niveisIndicadores = buscarIndicadoresAcima(usuario);
-
-            // Calcula o valor a ser distribuído para os indicadores
             BigDecimal valorTotalIndicadores = calcularValorParaIndicadores(rendimentoBruto, niveisIndicadores);
-
-            // O rendimento líquido do usuário é o rendimento bruto menos o valor dos indicadores
             BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
 
-            // Registra o rendimento principal (líquido) do usuário
+            // Registra o rendimento
             Rendimento rendimento = new Rendimento();
             rendimento.setUsuario(usuario);
             rendimento.setInvestimento(investimento);
@@ -167,17 +173,41 @@ public class RendimentoDiarioService {
             rendimento.setPercentualRendimento(percentualDoDia);
             rendimentoRepository.save(rendimento);
 
-            // Atualiza saldo do usuário com o valor líquido
+            // Atualiza saldo do usuário
             usuario.setSaldoRendimentos(usuario.getSaldoRendimentos().add(rendimentoLiquido));
             userRepository.save(usuario);
 
-            // Distribui os rendimentos para os indicadores
+            // Distribui rendimentos para indicadores
             distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
 
         } catch (Exception e) {
             log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());
             throw e;
         }
+    }
+
+    private void liquidarInvestimento(User usuario, Investimento investimento, BigDecimal saldoEfetivo) {
+        // Registra o rendimento de loss total
+        Rendimento rendimentoLoss = new Rendimento();
+        rendimentoLoss.setUsuario(usuario);
+        rendimentoLoss.setInvestimento(investimento);
+        rendimentoLoss.setValorRendimento(saldoEfetivo.negate()); // Valor negativo do saldo efetivo
+        rendimentoLoss.setTipoRendimento(TipoRendimento.L);
+        rendimentoLoss.setPercentualRendimento(BigDecimal.valueOf(100)); // Loss total = 100%
+        rendimentoRepository.save(rendimentoLoss);
+
+        // Finaliza o investimento
+        investimento.setStatus(StatusInvestimento.F);
+        investimento.setDataFim(LocalDateTime.now());
+        investimentoRepository.save(investimento);
+
+        // Zera os saldos do usuário
+        usuario.setSaldoInvestido(BigDecimal.ZERO);
+        usuario.setSaldoRendimentos(BigDecimal.ZERO);
+        userRepository.save(usuario);
+
+        log.warn("Investimento liquidado por loss total - Usuário: {}, Valor: {}",
+                usuario.getId(), saldoEfetivo);
     }
 
     private List<NivelIndicador> buscarIndicadoresAcima(User usuario) {
