@@ -431,3 +431,11 @@ UPDATE tb_rendimento SET tp_rendimento = 'I' WHERE tp_rendimento = 'INVESTIMENTO
 UPDATE tb_rendimento SET tp_rendimento = '1' WHERE tp_rendimento = 'N1';
 UPDATE tb_rendimento SET tp_rendimento = '2' WHERE tp_rendimento = 'N2';
 UPDATE tb_rendimento SET tp_rendimento = '3' WHERE tp_rendimento = 'N3';
+
+
+ALTER TABLE tb_rendimento
+    ADD COLUMN tp_resultado char(1);
+
+-- Atualizar registros existentes
+UPDATE tb_rendimento SET tp_resultado = 'L' WHERE vl_rendimento >= 0;
+UPDATE tb_rendimento SET tp_resultado = 'P' WHERE vl_rendimento < 0;

@@ -12,6 +12,5 @@ import java.io.Serializable;
 public class UserSessionDto implements Serializable {
 
     private Long id;
-
     private String nome;
 }

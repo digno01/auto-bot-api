@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.TipoRendimento;
+import br.com.auto.bot.auth.enums.TipoResultado;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
 import lombok.AllArgsConstructor;
@@ -171,6 +172,9 @@ public class RendimentoDiarioService {
             rendimento.setValorRendimento(rendimentoLiquido);
             rendimento.setTipoRendimento(TipoRendimento.I);
             rendimento.setPercentualRendimento(percentualDoDia);
+            rendimento.setTipoResultado(rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0 ?
+                    TipoResultado.LUCRO : TipoResultado.PERDA);
+            rendimentoRepository.save(rendimento);
             rendimentoRepository.save(rendimento);
 
             // Atualiza saldo do usuário
@@ -194,6 +198,7 @@ public class RendimentoDiarioService {
         rendimentoLoss.setValorRendimento(saldoEfetivo.negate()); // Valor negativo do saldo efetivo
         rendimentoLoss.setTipoRendimento(TipoRendimento.L);
         rendimentoLoss.setPercentualRendimento(BigDecimal.valueOf(100)); // Loss total = 100%
+        rendimentoLoss.setTipoResultado(TipoResultado.PERDA);
         rendimentoRepository.save(rendimentoLoss);
 
         // Finaliza o investimento
@@ -258,6 +263,8 @@ public class RendimentoDiarioService {
             rendimentoIndicacao.setValorRendimento(valorRendimentoIndicacao);
             rendimentoIndicacao.setTipoRendimento(getTipoRendimentoPorNivel(ni.getNivelIndicacao().getNivel()));
             rendimentoIndicacao.setPercentualRendimento(percentualNivel);
+            rendimentoIndicacao.setTipoResultado(valorRendimentoIndicacao.compareTo(BigDecimal.ZERO) >= 0 ?
+                    TipoResultado.LUCRO : TipoResultado.PERDA);
             rendimentoRepository.save(rendimentoIndicacao);
 
             // Atualiza saldo do indicador

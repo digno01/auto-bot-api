@@ -1,7 +1,9 @@
 package br.com.auto.bot.auth.model;
 
 import br.com.auto.bot.auth.converter.TipoRendimentoConverter;
+import br.com.auto.bot.auth.converter.TipoResultadoConverter;
 import br.com.auto.bot.auth.enums.TipoRendimento;
+import br.com.auto.bot.auth.enums.TipoResultado;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -46,9 +48,15 @@ public class Rendimento implements Serializable {
     @Column(name = "PC_RENDIMENTO")
     private BigDecimal percentualRendimento;
 
+    @Column(name = "TP_RESULTADO", length = 1)
+    @Convert(converter = TipoResultadoConverter.class)
+    private TipoResultado tipoResultado;
+
     @PrePersist
     protected void onCreate() {
         dataRendimento = LocalDateTime.now();
+        tipoResultado = valorRendimento.compareTo(BigDecimal.ZERO) >= 0 ?
+                TipoResultado.LUCRO : TipoResultado.PERDA;
     }
 }
 
