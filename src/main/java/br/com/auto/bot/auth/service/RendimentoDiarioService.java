@@ -148,7 +148,7 @@ public class RendimentoDiarioService {
             BigDecimal saldoRendimentos = usuario.getSaldoRendimentos();
 
             BigDecimal rendimentoBruto = saldoInvestido.multiply(percentualDoDia)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+                    .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN);
 
             if (rendimentoBruto.compareTo(BigDecimal.ZERO) < 0) {
                 BigDecimal saldoEfetivo = saldoInvestido.add(saldoRendimentos);
@@ -165,7 +165,6 @@ public class RendimentoDiarioService {
             List<NivelIndicador> niveisIndicadores = buscarIndicadoresAcima(usuario);
             BigDecimal valorTotalIndicadores = calcularValorParaIndicadores(rendimentoBruto, niveisIndicadores);
             BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
-
             Rendimento rendimento = new Rendimento();
             rendimento.setUsuario(usuario);
             rendimento.setInvestimento(investimento);
@@ -178,9 +177,36 @@ public class RendimentoDiarioService {
 
             registrarOperacoesCripto(rendimento);
 
-            usuario.setSaldoRendimentos(usuario.getSaldoRendimentos().add(rendimentoLiquido));
-            userRepository.save(usuario);
+            // Atualização dos saldos com nova lógica
+            if (rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0) {
+                // Se for lucro, adiciona ao saldo de rendimentos
+                usuario.setSaldoRendimentos(saldoRendimentos.add(rendimentoLiquido));
+            } else {
+                // Se for prejuízo
+                BigDecimal prejuizo = rendimentoLiquido.abs();
 
+                if (saldoRendimentos.compareTo(prejuizo) >= 0) {
+                    // Se tiver saldo suficiente em rendimentos, diminui dali
+                    usuario.setSaldoRendimentos(saldoRendimentos.subtract(prejuizo));
+                } else {
+                    // Se não tiver saldo suficiente em rendimentos
+                    BigDecimal prejuizoRestante = prejuizo.subtract(saldoRendimentos)
+                            .setScale(8, RoundingMode.DOWN);
+                    usuario.setSaldoRendimentos(BigDecimal.ZERO);
+
+                    // Diminui o restante do saldo investido
+                    BigDecimal novoSaldoInvestido = saldoInvestido.subtract(prejuizoRestante).setScale(2, RoundingMode.FLOOR);
+                    usuario.setSaldoInvestido(novoSaldoInvestido);
+
+                    // Se o saldo investido ficou zerado ou negativo, cancela o investimento
+                    if (novoSaldoInvestido.compareTo(BigDecimal.ZERO) <= 0) {
+                        cancelarInvestimento(usuario, investimento);
+                        return;
+                    }
+                }
+            }
+
+            userRepository.save(usuario);
             distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
 
         } catch (Exception e) {
@@ -189,6 +215,31 @@ public class RendimentoDiarioService {
         }
     }
 
+    private void cancelarInvestimento(User usuario, Investimento investimento) {
+        // Registra o rendimento final
+        Rendimento rendimentoCancelamento = new Rendimento();
+        rendimentoCancelamento.setUsuario(usuario);
+        rendimentoCancelamento.setInvestimento(investimento);
+        rendimentoCancelamento.setValorRendimento(BigDecimal.ZERO);
+        rendimentoCancelamento.setTipoRendimento(TipoRendimento.L);
+        rendimentoCancelamento.setPercentualRendimento(BigDecimal.valueOf(100));
+        rendimentoCancelamento.setTipoResultado(TipoResultado.PERDA);
+        rendimentoRepository.save(rendimentoCancelamento);
+
+        // Atualiza o status do investimento para CANCELADO
+        investimento.setStatus(StatusInvestimento.C);
+        investimento.setDataFim(LocalDateTime.now());
+        investimentoRepository.save(investimento);
+
+        // Zera os saldos do usuário
+        usuario.setSaldoInvestido(BigDecimal.ZERO);
+        usuario.setSaldoRendimentos(BigDecimal.ZERO);
+        userRepository.save(usuario);
+
+        log.warn("Investimento cancelado por saldo insuficiente - Usuário: {}", usuario.getId());
+    }
+
+
     private void registrarOperacoesCripto(Rendimento rendimento) {
         if (criptosDiarios == null || criptosDiarios.isEmpty()) {
             log.warn("Dados de criptomoedas não disponíveis");
@@ -196,6 +247,11 @@ public class RendimentoDiarioService {
         }
 
         BigDecimal valorRendimento = rendimento.getValorRendimento().abs();
+        if (valorRendimento.compareTo(BigDecimal.ZERO) == 0) {
+            log.warn("Valor do rendimento é zero, pulando registro de operações cripto");
+            return;
+        }
+
         int numeroOperacoes = new Random().nextInt(2) + 1; // 1 ou 2 operações
         List<BigDecimal> valoresBase = distribuirValorCompra(
                 valorRendimento.multiply(BigDecimal.valueOf(3)), // Base maior para ter margem
@@ -207,52 +263,86 @@ public class RendimentoDiarioService {
         for (int i = 0; i < numeroOperacoes && i < criptosDiarios.size(); i++) {
             CriptoData cripto = criptosDiarios.get(i);
             BigDecimal valorBase = valoresBase.get(i);
+            if (valorBase.compareTo(BigDecimal.ZERO) == 0) {
+                continue; // Pula se o valor base for zero
+            }
+
             BigDecimal valorVariacao = valorRendimento.multiply(
                     BigDecimal.valueOf(1.0 / numeroOperacoes)
             ).setScale(8, RoundingMode.HALF_DOWN);
 
-            if (isLucro) {
-                BigDecimal valorCompra = valorBase;
-                BigDecimal valorVenda = valorCompra.add(valorVariacao);
-                registrarOperacaoAjustada(rendimento, cripto, valorCompra, valorVenda);
-            } else {
-                // Para perda: inverte os valores e usa valores negativos
-                BigDecimal valorVenda = valorBase.negate();
-                BigDecimal valorCompra = valorVenda.subtract(valorVariacao);
-                registrarOperacaoAjustada(rendimento, cripto, valorCompra, valorVenda);
+            try {
+                if (isLucro) {
+                    BigDecimal valorCompra = valorBase;
+                    BigDecimal valorVenda = valorCompra.add(valorVariacao);
+                    registrarOperacaoAjustada(rendimento, cripto, valorCompra, valorVenda);
+                } else {
+                    // Para perda: valores positivos, mas lucro negativo
+                    BigDecimal valorCompra = valorBase;
+                    BigDecimal valorVenda = valorCompra.subtract(valorVariacao);
+                    registrarOperacaoAjustada(rendimento, cripto, valorCompra, valorVenda);
+                }
+            } catch (Exception e) {
+                log.error("Erro ao registrar operação cripto: " + e.getMessage());
             }
         }
     }
 
     private void registrarOperacaoAjustada(Rendimento rendimento, CriptoData cripto,
                                            BigDecimal valorCompra, BigDecimal valorVenda) {
-        LocalDateTime agora = LocalDateTime.now();
-        LocalDateTime horaCompra = agora.minusHours(new Random().nextInt(8) + 1);
-        LocalDateTime horaVenda = horaCompra.plusHours(new Random().nextInt(6) + 1);
+        try {
+            LocalDateTime agora = LocalDateTime.now();
+            LocalDateTime horaCompra = agora.minusHours(new Random().nextInt(8) + 1);
+            LocalDateTime horaVenda = horaCompra.plusHours(new Random().nextInt(6) + 1);
 
-        BigDecimal lucro = valorVenda.subtract(valorCompra);
-        BigDecimal percentualVariacao = lucro.multiply(BigDecimal.valueOf(100))
-                .divide(valorCompra.abs(), 2, RoundingMode.HALF_DOWN);
+            // Garante que os valores não sejam zero
+            if (valorCompra.compareTo(BigDecimal.ZERO) == 0) {
+                valorCompra = BigDecimal.ONE;
+            }
+            if (valorVenda.compareTo(BigDecimal.ZERO) == 0) {
+                valorVenda = BigDecimal.ONE;
+            }
 
-        BigDecimal precoMedio = cripto.getCurrentPrice();
-        if (precoMedio == null || precoMedio.compareTo(BigDecimal.ZERO) <= 0) {
-            precoMedio = BigDecimal.ONE;
+            BigDecimal lucro = valorVenda.subtract(valorCompra);
+
+            // Calcula o percentual de variação com proteção contra divisão por zero
+            BigDecimal percentualVariacao;
+            try {
+                percentualVariacao = lucro.multiply(BigDecimal.valueOf(100))
+                        .divide(valorCompra.abs(), 2, RoundingMode.HALF_DOWN);
+            } catch (ArithmeticException e) {
+                percentualVariacao = BigDecimal.ZERO;
+            }
+
+            BigDecimal precoMedio = cripto.getCurrentPrice();
+            if (precoMedio == null || precoMedio.compareTo(BigDecimal.ZERO) <= 0) {
+                precoMedio = BigDecimal.ONE;
+            }
+
+            BigDecimal quantidadeMoeda;
+            try {
+                quantidadeMoeda = valorCompra.abs().divide(precoMedio, 8, RoundingMode.HALF_DOWN);
+            } catch (ArithmeticException e) {
+                quantidadeMoeda = BigDecimal.ONE;
+            }
+
+            OperacaoCripto operacao = new OperacaoCripto();
+            operacao.setRendimento(rendimento);
+            operacao.setMoeda(cripto.getSymbol());
+            operacao.setValorCompra(valorCompra);
+            operacao.setValorVenda(valorVenda);
+            operacao.setQuantidadeMoeda(quantidadeMoeda);
+            operacao.setDataCompra(horaCompra);
+            operacao.setDataVenda(horaVenda);
+            operacao.setPercentualVariacao(percentualVariacao);
+            operacao.setValorLucro(lucro);
+            operacao.setUrlImagem(cripto.getImage());
+
+            operacaoCriptoRepository.save(operacao);
+        } catch (Exception e) {
+            log.error("Erro ao registrar operação ajustada: " + e.getMessage());
+            throw e;
         }
-        BigDecimal quantidadeMoeda = valorCompra.abs().divide(precoMedio, 8, RoundingMode.HALF_DOWN);
-
-        OperacaoCripto operacao = new OperacaoCripto();
-        operacao.setRendimento(rendimento);
-        operacao.setMoeda(cripto.getSymbol());
-        operacao.setValorCompra(valorCompra);
-        operacao.setValorVenda(valorVenda);
-        operacao.setQuantidadeMoeda(quantidadeMoeda);
-        operacao.setDataCompra(horaCompra);
-        operacao.setDataVenda(horaVenda);
-        operacao.setPercentualVariacao(percentualVariacao);
-        operacao.setValorLucro(lucro);
-        operacao.setUrlImagem(cripto.getImage());
-
-        operacaoCriptoRepository.save(operacao);
     }
 
     private List<BigDecimal> distribuirValorCompra(BigDecimal total, int partes) {
@@ -336,7 +426,7 @@ public class RendimentoDiarioService {
 
         // Zera os saldos do usuário
         usuario.setSaldoInvestido(BigDecimal.ZERO);
-        usuario.setSaldoRendimentos(BigDecimal.ZERO);
+        //usuario.setSaldoRendimentos(BigDecimal.ZERO);
         userRepository.save(usuario);
 
         log.warn("Investimento liquidado por loss total - Usuário: {}, Valor: {}",
@@ -371,7 +461,7 @@ public class RendimentoDiarioService {
     private BigDecimal calcularValorParaIndicadores(BigDecimal rendimentoBruto, List<NivelIndicador> indicadores) {
         return indicadores.stream()
                 .map(ni -> rendimentoBruto.multiply(ni.getNivelIndicacao().getPercentualRendimento())
-                        .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
+                        .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 }
