@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.service;
 
+import br.com.auto.bot.auth.dto.CriptoData;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.TipoRendimento;
 import br.com.auto.bot.auth.enums.TipoResultado;
@@ -20,6 +21,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Random;
 
 @Service
 @Slf4j
@@ -33,11 +35,18 @@ public class RendimentoDiarioService {
 
     @Autowired
     private IndicacaoRepository indicacaoRepository;
+
     @Autowired
     private InvestimentoRepository investimentoRepository;
 
     @Autowired
     private NivelIndicacaoRepository nivelIndicacaoRepository;
+
+    @Autowired
+    private CriptoService criptoService;
+
+    @Autowired
+    private OperacaoCriptoRepository operacaoCriptoRepository;
 
     @Value("${rendimento.percentual-min-lucro:5.0}")
     private double percentualMinLucro;
@@ -51,27 +60,25 @@ public class RendimentoDiarioService {
     @Value("${rendimento.probabilidade-lucro:0.70}")
     private double probabilidadeLucro;
 
+    private List<CriptoData> criptosDiarios;
+
     @Transactional
-    //@Scheduled(cron = "0 06 3 * * *") // Executa todos os dias às 02:30
     @Scheduled(cron = "0 */1 * * * *")
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 
         try {
-            // Determina se hoje será lucro ou prejuízo para todos
+            criptosDiarios = criptoService.buscarDadosCripto24h();
+            if (criptosDiarios.isEmpty()) {
+                log.warn("Nenhuma cripto com lucro nas últimas 24h");
+                return;
+            }
+
             boolean isLucro = Math.random() < probabilidadeLucro;
 
-
-//            log.info("Resultado do dia: {} - Percentual: {:.2f}%",
-//                    isLucro ? "LUCRO" : "PREJUÍZO",
-//                    percentualDoDia);
-
-            // Busca todos os usuários ativos com saldo investido
             List<User> usuarios = userRepository.findByIsActiveTrueAndSaldoInvestidoGreaterThan(BigDecimal.ZERO);
 
             for (User usuario : usuarios) {
-
-                // Calcula o percentual do dia
                 double percentualDoDia = isLucro ?
                         percentualMinLucro + (Math.random() * (percentualMaxLucro - percentualMinLucro)) :
                         percentualPrejuizo;
@@ -123,7 +130,6 @@ public class RendimentoDiarioService {
         }
         return percentual;
     }
-
     @Transactional
     public void processarRendimentoUsuario(User usuario, BigDecimal percentualDoDia) {
         try {
@@ -141,23 +147,18 @@ public class RendimentoDiarioService {
             BigDecimal saldoInvestido = usuario.getSaldoInvestido();
             BigDecimal saldoRendimentos = usuario.getSaldoRendimentos();
 
-            // Calcula o rendimento bruto
             BigDecimal rendimentoBruto = saldoInvestido.multiply(percentualDoDia)
                     .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
 
-            // Verifica se o rendimento é negativo
             if (rendimentoBruto.compareTo(BigDecimal.ZERO) < 0) {
-                // Calcula o saldo efetivo (investido - rendimentos negativos)
                 BigDecimal saldoEfetivo = saldoInvestido.add(saldoRendimentos);
 
-                // Se o saldo efetivo for zero ou negativo, liquida o investimento
                 if (saldoEfetivo.compareTo(BigDecimal.ZERO) <= 0) {
                     liquidarInvestimento(usuario, investimento, saldoEfetivo);
                     return;
                 }
             }
 
-            // Continua com o processamento normal se não houve liquidação
             investimento.setValorUltimoRendimento(rendimentoBruto);
             investimento.setIsUltimoRendimentoLoss(rendimentoBruto.compareTo(BigDecimal.ZERO) < 0);
 
@@ -165,7 +166,6 @@ public class RendimentoDiarioService {
             BigDecimal valorTotalIndicadores = calcularValorParaIndicadores(rendimentoBruto, niveisIndicadores);
             BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
 
-            // Registra o rendimento
             Rendimento rendimento = new Rendimento();
             rendimento.setUsuario(usuario);
             rendimento.setInvestimento(investimento);
@@ -175,18 +175,146 @@ public class RendimentoDiarioService {
             rendimento.setTipoResultado(rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0 ?
                     TipoResultado.LUCRO : TipoResultado.PERDA);
             rendimentoRepository.save(rendimento);
-            rendimentoRepository.save(rendimento);
 
-            // Atualiza saldo do usuário
+            registrarOperacoesCripto(rendimento);
+
             usuario.setSaldoRendimentos(usuario.getSaldoRendimentos().add(rendimentoLiquido));
             userRepository.save(usuario);
 
-            // Distribui rendimentos para indicadores
             distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
 
         } catch (Exception e) {
             log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());
             throw e;
+        }
+    }
+
+    private void registrarOperacoesCripto(Rendimento rendimento) {
+        if (criptosDiarios == null || criptosDiarios.isEmpty()) {
+            log.warn("Dados de criptomoedas não disponíveis");
+            return;
+        }
+
+        BigDecimal valorRendimento = rendimento.getValorRendimento().abs();
+        int numeroOperacoes = new Random().nextInt(2) + 1; // 1 ou 2 operações
+        List<BigDecimal> valoresBase = distribuirValorCompra(
+                valorRendimento.multiply(BigDecimal.valueOf(3)), // Base maior para ter margem
+                numeroOperacoes
+        );
+
+        boolean isLucro = rendimento.getTipoResultado().equals(TipoResultado.LUCRO);
+
+        for (int i = 0; i < numeroOperacoes && i < criptosDiarios.size(); i++) {
+            CriptoData cripto = criptosDiarios.get(i);
+            BigDecimal valorBase = valoresBase.get(i);
+            BigDecimal valorVariacao = valorRendimento.multiply(
+                    BigDecimal.valueOf(1.0 / numeroOperacoes)
+            ).setScale(8, RoundingMode.HALF_DOWN);
+
+            if (isLucro) {
+                BigDecimal valorCompra = valorBase;
+                BigDecimal valorVenda = valorCompra.add(valorVariacao);
+                registrarOperacaoAjustada(rendimento, cripto, valorCompra, valorVenda);
+            } else {
+                // Para perda: inverte os valores e usa valores negativos
+                BigDecimal valorVenda = valorBase.negate();
+                BigDecimal valorCompra = valorVenda.subtract(valorVariacao);
+                registrarOperacaoAjustada(rendimento, cripto, valorCompra, valorVenda);
+            }
+        }
+    }
+
+    private void registrarOperacaoAjustada(Rendimento rendimento, CriptoData cripto,
+                                           BigDecimal valorCompra, BigDecimal valorVenda) {
+        LocalDateTime agora = LocalDateTime.now();
+        LocalDateTime horaCompra = agora.minusHours(new Random().nextInt(8) + 1);
+        LocalDateTime horaVenda = horaCompra.plusHours(new Random().nextInt(6) + 1);
+
+        BigDecimal lucro = valorVenda.subtract(valorCompra);
+        BigDecimal percentualVariacao = lucro.multiply(BigDecimal.valueOf(100))
+                .divide(valorCompra.abs(), 2, RoundingMode.HALF_DOWN);
+
+        BigDecimal precoMedio = cripto.getCurrentPrice();
+        if (precoMedio == null || precoMedio.compareTo(BigDecimal.ZERO) <= 0) {
+            precoMedio = BigDecimal.ONE;
+        }
+        BigDecimal quantidadeMoeda = valorCompra.abs().divide(precoMedio, 8, RoundingMode.HALF_DOWN);
+
+        OperacaoCripto operacao = new OperacaoCripto();
+        operacao.setRendimento(rendimento);
+        operacao.setMoeda(cripto.getSymbol());
+        operacao.setValorCompra(valorCompra);
+        operacao.setValorVenda(valorVenda);
+        operacao.setQuantidadeMoeda(quantidadeMoeda);
+        operacao.setDataCompra(horaCompra);
+        operacao.setDataVenda(horaVenda);
+        operacao.setPercentualVariacao(percentualVariacao);
+        operacao.setValorLucro(lucro);
+        operacao.setUrlImagem(cripto.getImage());
+
+        operacaoCriptoRepository.save(operacao);
+    }
+
+    private List<BigDecimal> distribuirValorCompra(BigDecimal total, int partes) {
+        List<BigDecimal> distribuicao = new ArrayList<>();
+        BigDecimal restante = total;
+
+        for (int i = 0; i < partes - 1; i++) {
+            BigDecimal parte = restante.multiply(
+                    BigDecimal.valueOf(0.4 + Math.random() * 0.2)
+            ).setScale(8, RoundingMode.HALF_DOWN);
+            distribuicao.add(parte);
+            restante = restante.subtract(parte);
+        }
+
+        distribuicao.add(restante);
+        return distribuicao;
+    }
+
+    // ... (métodos auxiliares existentes permanecem iguais)
+
+    @Data
+    @AllArgsConstructor
+    private static class NivelIndicador {
+        private User indicador;
+        private NivelIndicacao nivelIndicacao;
+    }
+
+    private void distribuirRendimentosIndicadores(
+            List<NivelIndicador> indicadores,
+            BigDecimal rendimentoBruto,
+            Investimento investimento) {
+        for (NivelIndicador ni : indicadores) {
+            BigDecimal percentualNivel = ni.getNivelIndicacao().getPercentualRendimento();
+            BigDecimal valorRendimentoIndicacao = rendimentoBruto
+                    .multiply(percentualNivel)
+                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
+
+            // Registra o rendimento do indicador
+            Rendimento rendimentoIndicacao = new Rendimento();
+            rendimentoIndicacao.setUsuario(ni.getIndicador());
+            rendimentoIndicacao.setInvestimento(investimento);
+            rendimentoIndicacao.setValorRendimento(valorRendimentoIndicacao);
+            rendimentoIndicacao.setTipoRendimento(getTipoRendimentoPorNivel(ni.getNivelIndicacao().getNivel()));
+            rendimentoIndicacao.setPercentualRendimento(percentualNivel);
+            rendimentoIndicacao.setTipoResultado(valorRendimentoIndicacao.compareTo(BigDecimal.ZERO) >= 0 ?
+                    TipoResultado.LUCRO : TipoResultado.PERDA);
+            rendimentoRepository.save(rendimentoIndicacao);
+
+            // Atualiza saldo do indicador
+            ni.getIndicador().setSaldoRendimentos(
+                    ni.getIndicador().getSaldoRendimentos().add(valorRendimentoIndicacao)
+            );
+            userRepository.save(ni.getIndicador());
+        }
+    }
+
+    private TipoRendimento getTipoRendimentoPorNivel(Integer nivel) {
+        switch (nivel) {
+            case 1: return TipoRendimento.N1;
+            case 2: return TipoRendimento.N2;
+            case 3: return TipoRendimento.N3;
+            default: throw new IllegalArgumentException("Nível de indicação inválido: " + nivel);
         }
     }
 
@@ -239,57 +367,11 @@ public class RendimentoDiarioService {
         return indicadores;
     }
 
+
     private BigDecimal calcularValorParaIndicadores(BigDecimal rendimentoBruto, List<NivelIndicador> indicadores) {
         return indicadores.stream()
                 .map(ni -> rendimentoBruto.multiply(ni.getNivelIndicacao().getPercentualRendimento())
                         .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
     }
-
-    private void distribuirRendimentosIndicadores(
-            List<NivelIndicador> indicadores,
-            BigDecimal rendimentoBruto,
-            Investimento investimento) {
-        for (NivelIndicador ni : indicadores) {
-            BigDecimal percentualNivel = ni.getNivelIndicacao().getPercentualRendimento();
-            BigDecimal valorRendimentoIndicacao = rendimentoBruto
-                    .multiply(percentualNivel)
-                    .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
-            // Registra o rendimento do indicador
-            Rendimento rendimentoIndicacao = new Rendimento();
-            rendimentoIndicacao.setUsuario(ni.getIndicador());
-            rendimentoIndicacao.setInvestimento(investimento);
-            rendimentoIndicacao.setValorRendimento(valorRendimentoIndicacao);
-            rendimentoIndicacao.setTipoRendimento(getTipoRendimentoPorNivel(ni.getNivelIndicacao().getNivel()));
-            rendimentoIndicacao.setPercentualRendimento(percentualNivel);
-            rendimentoIndicacao.setTipoResultado(valorRendimentoIndicacao.compareTo(BigDecimal.ZERO) >= 0 ?
-                    TipoResultado.LUCRO : TipoResultado.PERDA);
-            rendimentoRepository.save(rendimentoIndicacao);
-
-            // Atualiza saldo do indicador
-            ni.getIndicador().setSaldoRendimentos(
-                    ni.getIndicador().getSaldoRendimentos().add(valorRendimentoIndicacao)
-            );
-            userRepository.save(ni.getIndicador());
-        }
-    }
-
-
-    private TipoRendimento getTipoRendimentoPorNivel(Integer nivel) {
-        switch (nivel) {
-            case 1: return TipoRendimento.N1;
-            case 2: return TipoRendimento.N2;
-            case 3: return TipoRendimento.N3;
-            default: throw new IllegalArgumentException("Nível de indicação inválido: " + nivel);
-        }
-    }
-    // Classe auxiliar para manter o indicador e seu nível juntos
-    @Data
-    @AllArgsConstructor
-    private static class NivelIndicador {
-        private User indicador;
-        private NivelIndicacao nivelIndicacao;
-    }
 }
-

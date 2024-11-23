@@ -439,3 +439,33 @@ ALTER TABLE tb_rendimento
 -- Atualizar registros existentes
 UPDATE tb_rendimento SET tp_resultado = 'L' WHERE vl_rendimento >= 0;
 UPDATE tb_rendimento SET tp_resultado = 'P' WHERE vl_rendimento < 0;
+
+
+
+
+-----
+
+-- Criar tabela TB_OPERACAO_CRIPTO
+CREATE TABLE TB_OPERACAO_CRIPTO (
+                                    PK_OPERACAO_CRIPTO BIGSERIAL PRIMARY KEY,
+                                    PK_RENDIMENTO BIGINT NOT NULL,
+                                    DS_MOEDA VARCHAR(10) NOT NULL,
+                                    VL_COMPRA NUMERIC(20,8) NOT NULL,
+                                    VL_VENDA NUMERIC(20,8) NOT NULL,
+                                    QT_MOEDA NUMERIC(20,8) NOT NULL,
+                                    DT_COMPRA TIMESTAMP NOT NULL,
+                                    DT_VENDA TIMESTAMP NOT NULL,
+                                    PC_VARIACAO NUMERIC(10,2) NOT NULL,
+                                    VL_LUCRO NUMERIC(20,8) NOT NULL,
+                                    DS_URL_IMAGEM VARCHAR(500),
+
+                                    CONSTRAINT fk_operacao_cripto_rendimento
+                                        FOREIGN KEY (PK_RENDIMENTO)
+                                            REFERENCES TB_RENDIMENTO (PK_RENDIMENTO)
+);
+
+
+CREATE INDEX idx_operacao_cripto_rendimento ON TB_OPERACAO_CRIPTO(PK_RENDIMENTO);
+CREATE INDEX idx_operacao_cripto_moeda ON TB_OPERACAO_CRIPTO(DS_MOEDA);
+CREATE INDEX idx_operacao_cripto_data_compra ON TB_OPERACAO_CRIPTO(DT_COMPRA);
+
