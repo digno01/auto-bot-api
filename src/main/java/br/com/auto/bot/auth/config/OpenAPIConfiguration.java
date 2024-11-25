@@ -53,20 +53,13 @@ public class OpenAPIConfiguration {
                 .name("bearerAuth")
                 .in(In.HEADER);
 
-        // Esquema de segurança adicional para a tag "sistema"
-        SecurityScheme sistemaScheme = new SecurityScheme()
-                .type(Type.APIKEY)
-                .in(In.HEADER)
-                .name("sistema");
 
         return new OpenAPI()
                 .info(information)
                 .servers(List.of(server))
                 .components(new io.swagger.v3.oas.models.Components()
-                        .addSecuritySchemes("bearerAuth", bearerAuthScheme)
-                        .addSecuritySchemes("sistema", sistemaScheme))
+                        .addSecuritySchemes("bearerAuth", bearerAuthScheme))
                 .addSecurityItem(new SecurityRequirement()
-                        .addList("bearerAuth")
-                        .addList("sistema")); // Adiciona a tag sistema como requisito de segurança
+                        .addList("bearerAuth"));
     }
 }

@@ -1,6 +1,5 @@
 package br.com.auto.bot.auth.repository;
 
-import br.com.auto.bot.auth.dto.DepositoEstatisticaDTO;
 import br.com.auto.bot.auth.model.Deposito;
 import br.com.auto.bot.auth.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;

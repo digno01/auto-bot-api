@@ -6,6 +6,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
 
 @Repository
@@ -15,4 +16,6 @@ public interface SaqueRepository extends JpaRepository<Saque, Long> {
             "WHERE s.investimento.id = :investimentoId " +
             "AND s.status = 'APROVADO'")
     Optional<BigDecimal> findTotalSaquesByInvestimento(@Param("investimentoId") Long investimentoId);
+
+    List<Saque> findByUsuarioId(Long usuarioId);
 }

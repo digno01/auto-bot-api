@@ -3,9 +3,9 @@ package br.com.auto.bot.auth.service;
 import br.com.auto.bot.auth.dto.InvestimentoRequestDTO;
 import br.com.auto.bot.auth.dto.InvestimentoResponseDTO;
 import br.com.auto.bot.auth.dto.InvestimentoResumoDTO;
+import br.com.auto.bot.auth.dto.InvestimentoSaqueDTO;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.exceptions.BussinessException;
-import br.com.auto.bot.auth.model.HistoricoTrocaRobo;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.RoboInvestidor;
 import br.com.auto.bot.auth.model.User;
@@ -55,8 +55,8 @@ public class InvestimentoService {
 
             if ("NOVO".equals(request.getTipoOperacao())) {
                 return realizarNovoInvestimento(usuario, robo, request.getValorInvestimento());
-            } else if ("TROCA".equals(request.getTipoOperacao())) {
-                return realizarTrocaRobo(usuario, robo);
+            /*} else if ("TROCA".equals(request.getTipoOperacao())) {
+                return realizarTrocaRobo(usuario, robo);*/
             } else {
                 throw new BussinessException("Tipo de operação inválido");
             }
@@ -77,12 +77,12 @@ public class InvestimentoService {
         }
 
         // Validação de saldo disponível para novo investimento
-        if ("NOVO".equals(request.getTipoOperacao())) {
-            if (usuario.getSaldoDisponivel().compareTo(request.getValorInvestimento()) < 0) {
-                throw new BussinessException("Saldo disponível insuficiente");
-            }
-            return;
-        }
+//        if ("NOVO".equals(request.getTipoOperacao())) {
+//            if (usuario.getSaldoDisponivel().compareTo(request.getValorInvestimento()) < 0) {
+//                throw new BussinessException("Saldo disponível insuficiente");
+//            }
+//            return;
+//        }
 
         // Validações apenas para troca de robô
         if ("TROCA".equals(request.getTipoOperacao())) {
@@ -94,7 +94,7 @@ public class InvestimentoService {
             }
 
             if (LocalDateTime.now().isBefore(
-                    investimentoAtivo.get().getDataInicio()
+                    investimentoAtivo.get().getDataInvestimento()
                             .plusDays(investimentoAtivo.get().getRoboInvestidor().getDiasPeriodo()))) {
                 throw new BussinessException("Período mínimo não atingido para troca de robô");
             }
@@ -111,11 +111,12 @@ public class InvestimentoService {
 
         if (investimentoExistente.isPresent()) {
             Investimento investimentoAtual = investimentoExistente.get();
-            investimentoAtual.setValorInvestido(investimentoAtual.getValorInvestido().add(valor));
+            investimentoAtual.setValorInicial(valor);
+            investimentoAtual.setSaldoAtual(valor);
             investimentoRepository.save(investimentoAtual);
 
-            usuario.setSaldoDisponivel(usuario.getSaldoDisponivel().subtract(valor));
-            usuario.setSaldoInvestido(usuario.getSaldoInvestido().add(valor));
+//            usuario.setSaldoDisponivel(usuario.getSaldoDisponivel().subtract(valor));
+//            usuario.setSaldoInvestido(usuario.getSaldoInvestido().add(valor));
             userRepository.save(usuario);
 
             return InvestimentoResponseDTO.fromEntity(investimentoAtual);
@@ -123,19 +124,18 @@ public class InvestimentoService {
             Investimento novoInvestimento = new Investimento();
             novoInvestimento.setUsuario(usuario);
             novoInvestimento.setRoboInvestidor(robo);
-            novoInvestimento.setValorInvestido(valor);
+            novoInvestimento.setValorInicial(valor);
             novoInvestimento.setStatus(StatusInvestimento.A);
-            novoInvestimento.setPercentualRendimentoDiario(calcularPercentualRendimentoDiario(robo));
-
-            usuario.setSaldoDisponivel(usuario.getSaldoDisponivel().subtract(valor));
-            usuario.setSaldoInvestido(usuario.getSaldoInvestido().add(valor));
+            novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(robo.getDiasPeriodo()));
+//            usuario.setSaldoDisponivel(usuario.getSaldoDisponivel().subtract(valor));
+//            usuario.setSaldoInvestido(usuario.getSaldoInvestido().add(valor));
             userRepository.save(usuario);
 
             return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));
         }
     }
 
-    private InvestimentoResponseDTO realizarTrocaRobo(User usuario, RoboInvestidor novoRobo) {
+  /*  private InvestimentoResponseDTO realizarTrocaRobo(User usuario, RoboInvestidor novoRobo) {
         Investimento investimentoAtual = investimentoRepository
                 .findByUsuarioAndStatus(usuario, StatusInvestimento.A)
                 .orElseThrow(() -> new BussinessException("Investimento ativo não encontrado"));
@@ -153,16 +153,14 @@ public class InvestimentoService {
 
         // Finaliza investimento atual
         investimentoAtual.setStatus(StatusInvestimento.F);
-        investimentoAtual.setDataFim(LocalDateTime.now());
         investimentoRepository.save(investimentoAtual);
 
         // Cria novo investimento
         Investimento novoInvestimento = new Investimento();
         novoInvestimento.setUsuario(usuario);
         novoInvestimento.setRoboInvestidor(novoRobo);
-        novoInvestimento.setValorInvestido(saldoTotal);
+        novoInvestimento.setValorInicial(saldoTotal);
         novoInvestimento.setStatus(StatusInvestimento.A);
-        novoInvestimento.setPercentualRendimentoDiario(calcularPercentualRendimentoDiario(novoRobo));
 
         // Atualiza saldos
         usuario.setSaldoInvestido(saldoTotal);
@@ -170,7 +168,7 @@ public class InvestimentoService {
         userRepository.save(usuario);
 
         return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));
-    }
+    }*/
 
     private BigDecimal calcularPercentualRendimentoDiario(RoboInvestidor robo) {
         BigDecimal range = robo.getPercentualRendimentoMax()
@@ -212,5 +210,40 @@ public class InvestimentoService {
                 projection.getValorTotalInvestido(),
                 projection.getMediaPercentualRendimento()
         );
+    }
+
+    public BigDecimal calcularSaldoParaSaque(Long usuarioId) {
+        List<Investimento> investimentosAtivos = investimentoRepository.findByUsuarioIdAndStatusAndDataLiberacaoLessThanEqualAndSaldoAtualGreaterThan(
+                usuarioId,
+                StatusInvestimento.A,
+                LocalDateTime.now(),
+                BigDecimal.ZERO
+        );
+
+        return investimentosAtivos.stream()
+                .map(Investimento::getSaldoAtual)
+                .filter(saldo -> saldo.compareTo(BigDecimal.ZERO) > 0)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+
+    public List<InvestimentoSaqueDTO> listarInvestimentosParaSaque(Long usuarioId) {
+        List<Investimento> investimentos = investimentoRepository.findByUsuarioIdAndSaldoAtualGreaterThanAndDataLiberacaoLessThanEqualAndStatus(
+                usuarioId,
+                BigDecimal.ZERO,
+                LocalDateTime.now(),
+                StatusInvestimento.A
+        );
+
+        return investimentos.stream()
+                .map(investimento -> new InvestimentoSaqueDTO(
+                        investimento.getId(),
+                        investimento.getRoboInvestidor().getNome(),
+                        investimento.getDataInvestimento(),
+                        investimento.getDataLiberacao(),
+                        investimento.getValorInicial(),
+                        investimento.getSaldoAtual()
+                ))
+                .collect(Collectors.toList());
     }
 }

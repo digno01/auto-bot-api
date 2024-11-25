@@ -3,6 +3,7 @@ package br.com.auto.bot.auth.enums;
 
 public enum StatusInvestimento {
     A("ATIVO"),
+    P("PENDENTE"),
     F("FINALIZADO"),
     C("CANCELADO");
 

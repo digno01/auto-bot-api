@@ -1,6 +1,5 @@
 package br.com.auto.bot.auth.repository;
 
-import br.com.auto.bot.auth.dto.EstatisticaTrocaRoboDTO;
 import br.com.auto.bot.auth.model.HistoricoTrocaRobo;
 import br.com.auto.bot.auth.model.User;
 import feign.Param;

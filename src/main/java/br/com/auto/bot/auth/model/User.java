@@ -63,7 +63,7 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
     @Column(name = "DS_REFRESH_TOKEN")
     private String refreshToken;
 
-    @Column(name = "is_active")
+    @Column(name = "IS_ACTIVE")
     private Boolean isActive;
 
     @Column(name = "QT_TENTATIVAS_RECUPERAR_SENHA")
@@ -80,14 +80,14 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
     @JoinTable(name = "TB_USUARIO_PERFIL", joinColumns = @JoinColumn(name = "PK_USUARIO"), inverseJoinColumns = @JoinColumn(name = "PK_PERFIL_ACESSO"))
     private Set<PerfilAcesso> perfilAcesso = new HashSet<>();
 
-    @Column(name = "vl_saldo_disponivel")
-    private BigDecimal saldoDisponivel = BigDecimal.ZERO;
-
-    @Column(name = "vl_saldo_investido")
-    private BigDecimal saldoInvestido = BigDecimal.ZERO;
-
-    @Column(name = "vl_saldo_rendimentos")
-    private BigDecimal saldoRendimentos = BigDecimal.ZERO;
+//    @Column(name = "vl_saldo_disponivel")
+//    private BigDecimal saldoDisponivel = BigDecimal.ZERO;
+//
+//    @Column(name = "vl_saldo_investido")
+//    private BigDecimal saldoInvestido = BigDecimal.ZERO;
+//
+//    @Column(name = "vl_saldo_rendimentos")
+//    private BigDecimal saldoRendimentos = BigDecimal.ZERO;
 
     @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
     private List<Investimento> investimentos = new ArrayList<>();

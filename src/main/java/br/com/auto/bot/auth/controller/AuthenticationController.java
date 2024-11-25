@@ -11,6 +11,10 @@ import br.com.auto.bot.auth.service.JwtService;
 import br.com.auto.bot.auth.dto.UserDTO;
 import br.com.auto.bot.auth.model.User;
 import br.com.auto.bot.auth.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.SneakyThrows;
@@ -20,6 +24,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Tag(name = "Autenticação", description = "Endpoints para autenticação e gerenciamento de usuários.")
 @RequestMapping("${app.api.url}/auth")
 @RestController
 public class AuthenticationController {
@@ -34,6 +39,11 @@ public class AuthenticationController {
         this.serviceBean = serviceBean;
     }
 
+    @Operation(summary = "Cadastrar um novo usuário", description = "Realiza o cadastro de um novo usuário no sistema.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Cadastrado realizado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Erro de validação dos dados.")
+    })
     @PostMapping("/singup")
     public ResponseEntity create(@Valid @RequestBody UserDTO dto, HttpServletRequest httpServletRequest)
             throws RegistroDuplicadoException, RegistroNaoEncontradoException {
@@ -47,12 +57,22 @@ public class AuthenticationController {
         return ResponseEntity.ok(new MessageDTO("Cadastrado realizado com sucesso."));
     }
 
+    @Operation(summary = "Ativar conta", description = "Ativa a conta de um usuário utilizando um token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Conta ativada com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Registro não encontrado.")
+    })
     @GetMapping("ativar-conta/{token}")
     public ResponseEntity ativarConta(@PathVariable String token) throws RegistroNaoEncontradoException {
         serviceBean.ativarConta(token);
         return ResponseEntity.ok(new MessageDTO("Conta Ativada com sucesso."));
     }
 
+    @Operation(summary = "Login do usuário", description = "Realiza o login de um usuário e retorna um token JWT.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Login realizado com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
+    })
     @PostMapping("/login")
     public ResponseEntity<LoginResponse> authenticate(@RequestBody LoginDTO loginUserDto, HttpServletRequest httpServletRequest) throws RegistroNaoEncontradoException {
         User authenticatedUser = serviceBean.authenticate(loginUserDto);
@@ -72,6 +92,12 @@ public class AuthenticationController {
         return ResponseEntity.ok(loginResponse);
     }
 
+
+    @Operation(summary = "Atualizar o token de acesso", description = "Atualiza o token JWT usando o refresh token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Token atualizado com sucesso."),
+            @ApiResponse(responseCode = "401", description = "Refresh token inválido.")
+    })
     @PostMapping("/refresh-token")
     public ResponseEntity<LoginResponse> refreshToken(@RequestBody String refreshToken, HttpServletRequest httpServletRequest) {
         // Verifique se o refresh token é válido e não expirou
@@ -87,6 +113,11 @@ public class AuthenticationController {
 
     }
 
+    @Operation(summary = "Logout do usuário", description = "Realiza o logout do usuário, invalidando o refresh token.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Logout realizado com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
+    })
     @PostMapping("/logout")
     public ResponseEntity<String> logout(@RequestBody String refreshToken) {
         User user = serviceBean.findByRefreshToken(refreshToken);
@@ -96,6 +127,11 @@ public class AuthenticationController {
         return ResponseEntity.ok("Logout realizado com sucesso.");
     }
 
+    @Operation(summary = "Recuperar senha", description = "Envia um link para recuperação de senha para o e-mail informado.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "E-mail enviado com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
+    })
 
     @GetMapping(path = "/recovery-password", produces = { MediaType.APPLICATION_JSON_VALUE })
     public ResponseEntity recoveryPassword(@RequestParam(value = "email",required = true) String email, HttpServletRequest request) throws RegistroNaoEncontradoException, BussinessException {
@@ -105,6 +141,11 @@ public class AuthenticationController {
     }
 
     @SneakyThrows
+    @Operation(summary = "Atualizar senha", description = "Atualiza a senha do usuário.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Senha atualizada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Erro na atualização da senha.")
+    })
     @PutMapping(path = "/update-recovery-password", consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
     public ResponseEntity<String> atualizarSenha(@RequestBody UpdatePasswordDTO updatePasswordDTO, HttpServletRequest request) {
         serviceBean.atualizarSenha(updatePasswordDTO, getClientIp(request));

@@ -21,8 +21,6 @@ public class DepositoResponseDTO {
     private LocalDateTime dataDeposito;
     private LocalDateTime dataLiberacaoSaque;
     private String nomeRobo;
-    private BigDecimal saldoInvestido;
-    private BigDecimal saldoRendimentos;
 
     public static DepositoResponseDTO fromEntities(Deposito deposito, Investimento investimento) {
         return new DepositoResponseDTO(
@@ -32,12 +30,10 @@ public class DepositoResponseDTO {
                 deposito.getStatus().getDescricao(),
                 investimento.getStatus().getDescricao(),
                 deposito.getDataDeposito(),
-                investimento.getDataInicio().plusDays(
+                investimento.getDataInvestimento().plusDays(
                         investimento.getRoboInvestidor().getDiasPeriodo()
                 ),
-                investimento.getRoboInvestidor().getNome(),
-                investimento.getUsuario().getSaldoInvestido(),
-                investimento.getUsuario().getSaldoRendimentos()
+                investimento.getRoboInvestidor().getNome()
         );
     }
 }

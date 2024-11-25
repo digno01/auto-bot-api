@@ -30,7 +30,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -133,10 +132,6 @@ public class UserService extends GenericService<User, Long> {
         String token = jwtService.generateRecoverToken(entity);
         entity.setToken(token);
 
-        // Inicializa os saldos
-        entity.setSaldoDisponivel(BigDecimal.ZERO);
-        entity.setSaldoInvestido(BigDecimal.ZERO);
-        entity.setSaldoRendimentos(BigDecimal.ZERO);
 
         User user = this.repository.save(entity);
         contactService.saveOrUpdate(dto.getContato(), user);

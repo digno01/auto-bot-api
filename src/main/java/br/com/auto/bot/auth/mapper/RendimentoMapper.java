@@ -15,7 +15,7 @@ public interface RendimentoMapper {
     @Mapping(target = "tipoRendimento", source = "rendimento.tipoRendimento.descricao")
     @Mapping(target = "percentualRendimento", source = "rendimento.percentualRendimento")
     @Mapping(target = "nomeRobo", source = "rendimento.investimento.roboInvestidor.nome")
-    @Mapping(target = "valorInvestido", source = "rendimento.investimento.valorInvestido")
+    @Mapping(target = "valorInvestido", source = "rendimento.investimento.saldoAtual")
     @Mapping(target = "diasPeriodo", source = "rendimento.investimento.roboInvestidor.diasPeriodo")
     @Mapping(target = "rendimentoMin", source = "rendimento.investimento.roboInvestidor.percentualRendimentoMin")
     @Mapping(target = "rendimentoMax", source = "rendimento.investimento.roboInvestidor.percentualRendimentoMax")

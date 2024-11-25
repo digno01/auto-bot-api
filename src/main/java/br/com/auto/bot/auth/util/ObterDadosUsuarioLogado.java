@@ -1,10 +1,6 @@
 package br.com.auto.bot.auth.util;
 
-import br.com.auto.bot.auth.dto.UserSessionDto;
-import br.com.auto.bot.auth.mapper.UserSessionMapper;
 import br.com.auto.bot.auth.model.User;
-import org.modelmapper.ModelMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Component;
 

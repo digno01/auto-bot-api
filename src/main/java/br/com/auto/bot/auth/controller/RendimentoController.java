@@ -6,7 +6,11 @@ import br.com.auto.bot.auth.mapper.RendimentoMapper;
 import br.com.auto.bot.auth.model.Rendimento;
 import br.com.auto.bot.auth.repository.RendimentoRepository;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
-import lombok.extern.slf4j.Slf4j;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
@@ -22,7 +26,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/rendimentos")
-@Slf4j
+@Tag(name = "Rendimentos", description = "Endpoints para gerenciar rendimentos dos usuários.")
 public class RendimentoController {
 
     @Autowired
@@ -33,9 +37,16 @@ public class RendimentoController {
         this.rendimentoMapper = rendimentoMapper;
     }
 
+    @Operation(summary = "Obter rendimentos do usuário", description = "Retorna uma lista de rendimentos do usuário dentro de um período específico.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de rendimentos retornada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Erro na validação das datas fornecidas.")
+    })
     @GetMapping("/usuario")
     public ResponseEntity<List<RendimentoDTO>> getRendimentosUsuario(
+            @Parameter(description = "Data de início do período para consulta", example = "2023-01-01")
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dataInicio,
+            @Parameter(description = "Data de fim do período para consulta", example = "2023-01-31")
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dataFim) {
 
         LocalDateTime inicio = dataInicio.atStartOfDay();
@@ -48,13 +59,18 @@ public class RendimentoController {
         List<RendimentoDTO> rendimentosDTO = rendimentoMapper.toDtoList(rendimentos);
 
         return ResponseEntity.ok(rendimentosDTO);
-
-
     }
 
+    @Operation(summary = "Obter resumo dos rendimentos", description = "Retorna um resumo dos rendimentos do usuário dentro de um período específico.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Resumo de rendimentos retornado com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Erro na validação das datas fornecidas.")
+    })
     @GetMapping("/resumo")
     public ResponseEntity<Map<String, BigDecimal>> getResumoRendimentos(
+            @Parameter(description = "Data de início do período para consulta", example = "2023-01-01")
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dataInicio,
+            @Parameter(description = "Data de fim do período para consulta", example = "2023-01-31")
             @RequestParam @DateTimeFormat(pattern = "yyyy-MM-dd") LocalDate dataFim) {
 
         Long userId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
@@ -107,5 +123,4 @@ public class RendimentoController {
                 tipo == TipoRendimento.N2 ||
                 tipo == TipoRendimento.N3;
     }
-
 }

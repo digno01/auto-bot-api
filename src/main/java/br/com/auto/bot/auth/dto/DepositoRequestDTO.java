@@ -10,7 +10,6 @@ import java.math.BigDecimal;
 @NoArgsConstructor
 @AllArgsConstructor
 public class DepositoRequestDTO {
-    private Long usuarioId;
     private Long roboId;
     private BigDecimal valorDeposito;
 }

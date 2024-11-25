@@ -1,6 +1,19 @@
--- public.tb_nivel_indicacao definition
 
--- Drop table
+-- Criar tabela de robô investidor
+CREATE TABLE tb_robo_investidor
+(
+    pk_robo_investidor  serial4        NOT NULL,
+    ds_nome             varchar(50)    NOT NULL,
+    nu_dias_periodo     int4           NOT NULL,
+    pc_rendimento_min   numeric(5, 2)  NOT NULL,
+    pc_rendimento_max   numeric(5, 2)  NOT NULL,
+    vl_investimento_min numeric(15, 2) NOT NULL,
+    vl_investimento_max numeric(15, 2) NOT NULL,
+    is_active           bool           NOT NULL DEFAULT true,
+    dt_created_at       timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT tb_robo_investidor_pkey PRIMARY KEY (pk_robo_investidor)
+);
+
 
 -- DROP TABLE tb_nivel_indicacao;
 
@@ -51,32 +64,55 @@ CREATE TABLE tb_permissao_acesso
 
 -- DROP TABLE tb_usuario;
 
-CREATE TABLE tb_usuario
-(
-    pk_usuario                      serial4        NOT NULL,
-    ds_email                        varchar(100)   NOT NULL,
-    ds_senha                        varchar(100)   NOT NULL,
-    nu_cpf                          varchar(11)    NOT NULL,
-    no_usuario                      varchar(200)   NOT NULL,
-    dt_created_at                   timestamp      NOT NULL,
-    dt_updated_at                   timestamp NULL,
-    nu_deleted                      bool           NOT NULL DEFAULT false,
-    ds_token                        varchar(500) NULL,
-    ds_refresh_token                varchar(500) NULL,
-    qt_tentativas_recuperar_senha   int2           NOT NULL DEFAULT 0,
-    dt_ultima_tentativa_recuperacao timestamp NULL,
-    is_active                       bool           NOT NULL DEFAULT false,
-    vl_saldo_disponivel             numeric(15, 2) NOT NULL DEFAULT 0,
-    vl_saldo_investido              numeric(15, 2) NOT NULL DEFAULT 0,
-    vl_saldo_rendimentos            numeric(15, 2) NOT NULL DEFAULT 0,
-    ds_codigo_indicacao             varchar(8)     NOT NULL,
-    CONSTRAINT tb_usuario_pkey PRIMARY KEY (pk_usuario),
-    CONSTRAINT tb_usuario_cpf_unique UNIQUE (nu_cpf),
-    CONSTRAINT tb_usuario_email_unique UNIQUE (ds_email),
-    CONSTRAINT tb_usuario_codigo_indicacao_unique UNIQUE (ds_codigo_indicacao)
+CREATE TABLE public.tb_usuario (
+                                   pk_usuario serial4 NOT NULL,
+                                   ds_email varchar(100) NOT NULL,
+                                   ds_senha varchar(100) NOT NULL,
+                                   nu_cpf varchar(11) NOT NULL,
+                                   no_usuario varchar(200) NOT NULL,
+                                   dt_created_at timestamp NOT NULL,
+                                   dt_updated_at timestamp NULL,
+                                   nu_deleted bool NOT NULL DEFAULT false,
+                                   ds_token varchar(500) NULL,
+                                   ds_refresh_token varchar(500) NULL,
+                                   qt_tentativas_recuperar_senha int2 NOT NULL DEFAULT 0,
+                                   dt_ultima_tentativa_recuperacao timestamp NULL,
+                                   is_active bool NOT NULL DEFAULT false,
+                                   vl_saldo_disponivel numeric(15, 8) NOT NULL DEFAULT 0,
+                                   vl_saldo_investido numeric(15, 8) NOT NULL DEFAULT 0,
+                                   vl_saldo_rendimentos numeric(15, 8) NOT NULL DEFAULT 0,
+                                   ds_codigo_indicacao varchar(8) NOT NULL,
+                                   CONSTRAINT tb_usuario_codigo_indicacao_unique UNIQUE (ds_codigo_indicacao),
+                                   CONSTRAINT tb_usuario_cpf_unique UNIQUE (nu_cpf),
+                                   CONSTRAINT tb_usuario_email_unique UNIQUE (ds_email),
+                                   CONSTRAINT tb_usuario_pkey PRIMARY KEY (pk_usuario)
 );
+CREATE INDEX idx_usuario_codigo_indicacao ON public.tb_usuario USING btree (ds_codigo_indicacao);
 
-CREATE INDEX idx_usuario_codigo_indicacao ON tb_usuario (ds_codigo_indicacao);
+
+CREATE TABLE TB_INVESTIMENTO (
+                                        PK_INVESTIMENTO SERIAL4 NOT NULL,
+                                        PK_USUARIO INT8 NOT NULL,
+                                        PK_ROBO_INVESTIDOR INT8 NULL,
+                                        VL_INICIAL NUMERIC(15, 2) NOT NULL,
+                                        SALDO_ATUAL NUMERIC(15, 2) NULL,
+                                        DT_INVESTIMENTO TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        DT_LIBERACAO TIMESTAMP NULL,
+                                        ST_INVESTIMENTO BPCHAR(1) NOT NULL DEFAULT 'A'::BPCHAR,
+                                        IS_LIBERADO_SAQUE BOOL NULL,
+                                        IS_ULTIMO_RENDIMENTO_LOSS BOOL NULL,
+                                        DT_CREATED_AT TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        DT_UPDATED_AT TIMESTAMP NULL,
+
+                                        CONSTRAINT TB_INVESTIMENTO_PKEY PRIMARY KEY (PK_INVESTIMENTO),
+                                        CONSTRAINT TB_INVESTIMENTO_ROBO_FK FOREIGN KEY (PK_ROBO_INVESTIDOR) REFERENCES PUBLIC.TB_ROBO_INVESTIDOR(PK_ROBO_INVESTIDOR),
+                                        CONSTRAINT TB_INVESTIMENTO_USUARIO_FK FOREIGN KEY (PK_USUARIO) REFERENCES PUBLIC.TB_USUARIO(PK_USUARIO)
+);
+CREATE INDEX IDX_INVESTIMENTO_ROBO ON TB_INVESTIMENTO USING BTREE (PK_ROBO_INVESTIDOR);
+CREATE INDEX IDX_INVESTIMENTO_STATUS ON TB_INVESTIMENTO USING BTREE (ST_INVESTIMENTO);
+
+
+
 
 
 -- public.tb_contato definition
@@ -143,20 +179,8 @@ CREATE TABLE tb_indicacao
 
 -- Drop table
 
--- DROP TABLE tb_investimento;
 
-CREATE TABLE tb_investimento
-(
-    pk_investimento                 serial4        NOT NULL,
-    pk_usuario                      int8           NOT NULL,
-    vl_investido                    numeric(15, 2) NOT NULL,
-    nu_percentual_rendimento_diario numeric(5, 2)  NOT NULL,
-    dt_inicio                       timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    dt_fim                          timestamp NULL,
-    st_investimento                 bpchar(1) NOT NULL DEFAULT 'A'::bpchar,
-    CONSTRAINT tb_investimento_pkey PRIMARY KEY (pk_investimento),
-    CONSTRAINT tb_investimento_usuario_fk FOREIGN KEY (pk_usuario) REFERENCES tb_usuario (pk_usuario)
-);
+
 
 
 -- public.tb_rendimento definition
@@ -227,29 +251,7 @@ INSERT INTO tb_perfil_acesso (no_perfil_acesso, ds_perfil)
 VALUES ('ADMIN', 'Administrador do Sistema'),
        ('USER', 'Usuário Comum');
 
--- Criar tabela de robô investidor
-CREATE TABLE tb_robo_investidor
-(
-    pk_robo_investidor  serial4        NOT NULL,
-    ds_nome             varchar(50)    NOT NULL,
-    nu_dias_periodo     int4           NOT NULL,
-    pc_rendimento_min   numeric(5, 2)  NOT NULL,
-    pc_rendimento_max   numeric(5, 2)  NOT NULL,
-    vl_investimento_min numeric(15, 2) NOT NULL,
-    vl_investimento_max numeric(15, 2) NOT NULL,
-    is_active           bool           NOT NULL DEFAULT true,
-    dt_created_at       timestamp      NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT tb_robo_investidor_pkey PRIMARY KEY (pk_robo_investidor)
-);
 
--- Alterar tabela de investimento para incluir robô e campos de controle
-ALTER TABLE tb_investimento
-    ADD COLUMN pk_robo_investidor int8,
-ADD COLUMN vl_ultimo_rendimento numeric(15,2),
-ADD COLUMN is_ultimo_rendimento_loss bool,
-ADD CONSTRAINT tb_investimento_robo_fk
-    FOREIGN KEY (pk_robo_investidor)
-    REFERENCES tb_robo_investidor(pk_robo_investidor);
 
 -- Inserir configurações dos robôs
 INSERT INTO tb_robo_investidor (ds_nome,
@@ -266,9 +268,6 @@ VALUES ('ROBO_1D', 1, 2.00, 3.00, 5.00, 10.00),
        ('ROBO_90D', 90, 3.50, 6.00, 50.00, 500.00),
        ('ROBO_180D', 180, 4.15, 10.00, 100.00, 5000.00);
 
--- Criar índices para melhor performance
-CREATE INDEX idx_investimento_robo ON tb_investimento (pk_robo_investidor);
-CREATE INDEX idx_investimento_status ON tb_investimento (st_investimento);
 CREATE INDEX idx_rendimento_data ON tb_rendimento (dt_rendimento);
 
 -- Criar view para análise de rendimentos por robô
@@ -290,7 +289,7 @@ OR REPLACE FUNCTION fn_validar_limites_investimento()
 RETURNS TRIGGER AS $$
 BEGIN
     IF
-NEW.vl_investido < (
+NEW.vl_inicial < (
         SELECT vl_investimento_min
         FROM tb_robo_investidor
         WHERE pk_robo_investidor = NEW.pk_robo_investidor
@@ -299,7 +298,7 @@ NEW.vl_investido < (
 END IF;
 
     IF
-NEW.vl_investido > (
+NEW.vl_inicial > (
         SELECT vl_investimento_max
         FROM tb_robo_investidor
         WHERE pk_robo_investidor = NEW.pk_robo_investidor
@@ -337,12 +336,7 @@ END;
 $$
 LANGUAGE plpgsql;
 
--- Adicionar campos de auditoria
-ALTER TABLE tb_investimento
-    ADD COLUMN dt_created_at timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
-ADD COLUMN dt_updated_at timestamp,
-ADD COLUMN ds_usuario_criacao varchar(50),
-ADD COLUMN ds_usuario_atualizacao varchar(50);
+
 
 -- Criar trigger para atualização automática
 CREATE
@@ -386,9 +380,6 @@ CREATE TABLE tb_historico_troca_robo (
                                          CONSTRAINT tb_historico_troca_robo_destino_fk FOREIGN KEY (pk_robo_destino) REFERENCES tb_robo_investidor(pk_robo_investidor)
 );
 
--- Adicionar campo de data prevista de liberação no investimento
-ALTER TABLE tb_investimento
-    ADD COLUMN dt_liberacao_saque timestamp;
 
 
 ALTER TABLE tb_deposito
@@ -401,9 +392,6 @@ UPDATE tb_deposito SET st_deposito = 'R' WHERE st_deposito = 'REJEITADO';
 UPDATE tb_deposito SET st_deposito = 'C' WHERE st_deposito = 'CANCELADO';
 
 
--- Alterar tipo da coluna se necessário
-ALTER TABLE tb_investimento
-ALTER COLUMN st_investimento TYPE char(1);
 
 -- Converter dados existentes
 UPDATE tb_investimento SET st_investimento = 'A' WHERE st_investimento = 'ATIVO';

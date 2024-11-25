@@ -48,14 +48,6 @@ public class RendimentoDiarioService {
     @Autowired
     private OperacaoCriptoRepository operacaoCriptoRepository;
 
-    @Value("${rendimento.percentual-min-lucro:5.0}")
-    private double percentualMinLucro;
-
-    @Value("${rendimento.percentual-max-lucro:13.0}")
-    private double percentualMaxLucro;
-
-    @Value("${rendimento.percentual-prejuizo:-3.0}")
-    private double percentualPrejuizo;
 
     @Value("${rendimento.probabilidade-lucro:0.70}")
     private double probabilidadeLucro;
@@ -74,15 +66,10 @@ public class RendimentoDiarioService {
                 return;
             }
 
-            boolean isLucro = Math.random() < probabilidadeLucro;
-
-            List<User> usuarios = userRepository.findByIsActiveTrueAndSaldoInvestidoGreaterThan(BigDecimal.ZERO);
+            List<User> usuarios = userRepository.findUsersWithActiveInvestmentsAndPositiveBalance(BigDecimal.ZERO);
 
             for (User usuario : usuarios) {
-                double percentualDoDia = isLucro ?
-                        percentualMinLucro + (Math.random() * (percentualMaxLucro - percentualMinLucro)) :
-                        percentualPrejuizo;
-                processarRendimentoUsuario(usuario, BigDecimal.valueOf(percentualDoDia));
+                processarRendimentoUsuario(usuario);
             }
 
             log.info("Processamento de rendimentos concluído com sucesso.");
@@ -93,17 +80,17 @@ public class RendimentoDiarioService {
         }
     }
 
-    private Investimento buscarOuCriarInvestimentoAtivo(User usuario) {
-        return investimentoRepository.findFirstByUsuarioAndStatusOrderByDataInicioDesc(usuario, StatusInvestimento.A)
-                .orElseGet(() -> {
-                    Investimento novoInvestimento = new Investimento();
-                    novoInvestimento.setUsuario(usuario);
-                    novoInvestimento.setValorInvestido(usuario.getSaldoInvestido());
-                    novoInvestimento.setStatus(StatusInvestimento.A);
-                    novoInvestimento.setDataInicio(LocalDateTime.now());
-                    return investimentoRepository.save(novoInvestimento);
-                });
-    }
+//    private Investimento buscarOuCriarInvestimentoAtivo(User usuario) {
+//        return investimentoRepository.findFirstByUsuarioAndStatusOrderByDataInicioDesc(usuario, StatusInvestimento.A)
+//                .orElseGet(() -> {
+//                    Investimento novoInvestimento = new Investimento();
+//                    novoInvestimento.setUsuario(usuario);
+//                    novoInvestimento.setValorInvestido(usuario.getSaldoInvestido());
+//                    novoInvestimento.setStatus(StatusInvestimento.A);
+//                    novoInvestimento.setDataInicio(LocalDateTime.now());
+//                    return investimentoRepository.save(novoInvestimento);
+//                });
+//    }
 
     private BigDecimal ajustarPercentualRendimento(
             BigDecimal percentualBase,
@@ -131,83 +118,74 @@ public class RendimentoDiarioService {
         return percentual;
     }
     @Transactional
-    public void processarRendimentoUsuario(User usuario, BigDecimal percentualDoDia) {
+    public void processarRendimentoUsuario(User usuario) {
         try {
-            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
-            RoboInvestidor robo = investimento.getRoboInvestidor();
 
-            BigDecimal percentualAjustado = ajustarPercentualRendimento(
-                    percentualDoDia,
-                    investimento.getIsUltimoRendimentoLoss(),
-                    investimento.getValorUltimoRendimento()
-            );
+            List<Investimento> listInvestimentos = investimentoRepository.findAllInvestimentosAtivosComSaldoByUsuarioId(usuario.getId());
 
-            percentualAjustado = limitarPercentualRobo(percentualAjustado, robo);
+            listInvestimentos.forEach(investimento -> {
+                RoboInvestidor robo = investimento.getRoboInvestidor();
+                boolean isLucro = Math.random() < probabilidadeLucro;
+                double percentualDoDia = isLucro ?
+                        investimento.getRoboInvestidor().getPercentualRendimentoMin().doubleValue() + (Math.random() * (robo.getPercentualRendimentoMax().subtract(robo.getPercentualRendimentoMin())).doubleValue()) :
+                        (Double.valueOf(-0.01));
+                BigDecimal saldoRendimentos = investimento.getSaldoAtual();
+                BigDecimal rendimentoBruto = saldoRendimentos.multiply(BigDecimal.valueOf(percentualDoDia))
+                        .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN);
 
-            BigDecimal saldoInvestido = usuario.getSaldoInvestido();
-            BigDecimal saldoRendimentos = usuario.getSaldoRendimentos();
+                BigDecimal saldoAcumulado = saldoRendimentos.add(rendimentoBruto);
+                if (saldoAcumulado.compareTo(BigDecimal.ZERO) < 0) {
+                    BigDecimal saldoEfetivo = saldoAcumulado;
 
-            BigDecimal rendimentoBruto = saldoInvestido.multiply(percentualDoDia)
-                    .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN);
-
-            if (rendimentoBruto.compareTo(BigDecimal.ZERO) < 0) {
-                BigDecimal saldoEfetivo = saldoInvestido.add(saldoRendimentos);
-
-                if (saldoEfetivo.compareTo(BigDecimal.ZERO) <= 0) {
-                    liquidarInvestimento(usuario, investimento, saldoEfetivo);
-                    return;
-                }
-            }
-
-            investimento.setValorUltimoRendimento(rendimentoBruto);
-            investimento.setIsUltimoRendimentoLoss(rendimentoBruto.compareTo(BigDecimal.ZERO) < 0);
-
-            List<NivelIndicador> niveisIndicadores = buscarIndicadoresAcima(usuario);
-            BigDecimal valorTotalIndicadores = calcularValorParaIndicadores(rendimentoBruto, niveisIndicadores);
-            BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
-            Rendimento rendimento = new Rendimento();
-            rendimento.setUsuario(usuario);
-            rendimento.setInvestimento(investimento);
-            rendimento.setValorRendimento(rendimentoLiquido);
-            rendimento.setTipoRendimento(TipoRendimento.I);
-            rendimento.setPercentualRendimento(percentualDoDia);
-            rendimento.setTipoResultado(rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0 ?
-                    TipoResultado.LUCRO : TipoResultado.PERDA);
-            rendimentoRepository.save(rendimento);
-
-            registrarOperacoesCripto(rendimento);
-
-            // Atualização dos saldos com nova lógica
-            if (rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0) {
-                // Se for lucro, adiciona ao saldo de rendimentos
-                usuario.setSaldoRendimentos(saldoRendimentos.add(rendimentoLiquido));
-            } else {
-                // Se for prejuízo
-                BigDecimal prejuizo = rendimentoLiquido.abs();
-
-                if (saldoRendimentos.compareTo(prejuizo) >= 0) {
-                    // Se tiver saldo suficiente em rendimentos, diminui dali
-                    usuario.setSaldoRendimentos(saldoRendimentos.subtract(prejuizo));
-                } else {
-                    // Se não tiver saldo suficiente em rendimentos
-                    BigDecimal prejuizoRestante = prejuizo.subtract(saldoRendimentos)
-                            .setScale(8, RoundingMode.DOWN);
-                    usuario.setSaldoRendimentos(BigDecimal.ZERO);
-
-                    // Diminui o restante do saldo investido
-                    BigDecimal novoSaldoInvestido = saldoInvestido.subtract(prejuizoRestante).setScale(2, RoundingMode.FLOOR);
-                    usuario.setSaldoInvestido(novoSaldoInvestido);
-
-                    // Se o saldo investido ficou zerado ou negativo, cancela o investimento
-                    if (novoSaldoInvestido.compareTo(BigDecimal.ZERO) <= 0) {
-                        cancelarInvestimento(usuario, investimento);
+                    if (saldoEfetivo.compareTo(BigDecimal.ZERO) <= 0) {
+                        liquidarInvestimento(usuario, investimento, saldoEfetivo);
                         return;
                     }
                 }
-            }
+                investimento.setSaldoAtual(saldoAcumulado);
+                investimento.setIsUltimoRendimentoLoss(saldoAcumulado.compareTo(BigDecimal.ZERO) < 0);
 
-            userRepository.save(usuario);
-            distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
+
+
+                List<NivelIndicador> niveisIndicadores = buscarIndicadoresAcima(usuario);
+                BigDecimal valorTotalIndicadores = calcularValorParaIndicadores(rendimentoBruto, niveisIndicadores);
+                BigDecimal rendimentoLiquido = rendimentoBruto.subtract(valorTotalIndicadores);
+                Rendimento rendimento = new Rendimento();
+                rendimento.setUsuario(usuario);
+                rendimento.setInvestimento(investimento);
+                rendimento.setValorRendimento(rendimentoLiquido);
+                rendimento.setTipoRendimento(TipoRendimento.I);
+                rendimento.setPercentualRendimento(BigDecimal.valueOf(percentualDoDia));
+                rendimento.setTipoResultado(rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0 ?
+                        TipoResultado.LUCRO : TipoResultado.PERDA);
+                rendimentoRepository.save(rendimento);
+
+                registrarOperacoesCripto(rendimento);
+
+                if (investimento.getSaldoAtual().compareTo(BigDecimal.ZERO) <= 0) {
+                    cancelarInvestimento(usuario, investimento);
+                    return;
+                }
+                distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
+
+            });
+//            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
+//            RoboInvestidor robo = investimento.getRoboInvestidor();
+//
+//            BigDecimal percentualAjustado = ajustarPercentualRendimento(
+//                    percentualDoDia,
+//                    investimento.getIsUltimoRendimentoLoss(),
+//                    investimento.getValorUltimoRendimento()
+//            );
+
+
+
+
+
+
+          //  investimento.setValorUltimoRendimento(rendimentoBruto);
+
+
 
         } catch (Exception e) {
             log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());
@@ -225,15 +203,9 @@ public class RendimentoDiarioService {
         rendimentoCancelamento.setPercentualRendimento(BigDecimal.valueOf(100));
         rendimentoCancelamento.setTipoResultado(TipoResultado.PERDA);
         rendimentoRepository.save(rendimentoCancelamento);
-
         // Atualiza o status do investimento para CANCELADO
         investimento.setStatus(StatusInvestimento.C);
-        investimento.setDataFim(LocalDateTime.now());
         investimentoRepository.save(investimento);
-
-        // Zera os saldos do usuário
-        usuario.setSaldoInvestido(BigDecimal.ZERO);
-        usuario.setSaldoRendimentos(BigDecimal.ZERO);
         userRepository.save(usuario);
 
         log.warn("Investimento cancelado por saldo insuficiente - Usuário: {}", usuario.getId());
@@ -390,11 +362,11 @@ public class RendimentoDiarioService {
             rendimentoIndicacao.setTipoResultado(valorRendimentoIndicacao.compareTo(BigDecimal.ZERO) >= 0 ?
                     TipoResultado.LUCRO : TipoResultado.PERDA);
             rendimentoRepository.save(rendimentoIndicacao);
-
-            // Atualiza saldo do indicador
-            ni.getIndicador().setSaldoRendimentos(
-                    ni.getIndicador().getSaldoRendimentos().add(valorRendimentoIndicacao)
-            );
+//
+//            // Atualiza saldo do indicador
+//            ni.getIndicador().setSaldoRendimentos(
+//                    ni.getIndicador().getSaldoRendimentos().add(valorRendimentoIndicacao)
+//            );
             userRepository.save(ni.getIndicador());
         }
     }
@@ -421,12 +393,7 @@ public class RendimentoDiarioService {
 
         // Finaliza o investimento
         investimento.setStatus(StatusInvestimento.F);
-        investimento.setDataFim(LocalDateTime.now());
         investimentoRepository.save(investimento);
-
-        // Zera os saldos do usuário
-        usuario.setSaldoInvestido(BigDecimal.ZERO);
-        //usuario.setSaldoRendimentos(BigDecimal.ZERO);
         userRepository.save(usuario);
 
         log.warn("Investimento liquidado por loss total - Usuário: {}, Valor: {}",

@@ -26,36 +26,50 @@ public class Investimento implements Serializable {
     @JoinColumn(name = "PK_USUARIO")
     private User usuario;
 
-    @Column(name = "VL_INVESTIDO")
-    private BigDecimal valorInvestido;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "PK_ROBO_INVESTIDOR")
+    private RoboInvestidor roboInvestidor;
 
-    @Column(name = "NU_PERCENTUAL_RENDIMENTO_DIARIO")
-    private BigDecimal percentualRendimentoDiario;
+    @Column(name = "VL_INICIAL")
+    private BigDecimal valorInicial;
 
-    @Column(name = "DT_INICIO")
+    @Column(name = "SALDO_ATUAL")
+    private BigDecimal saldoAtual;
+
+    @Column(name = "DT_INVESTIMENTO")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    private LocalDateTime dataInicio;
+    private LocalDateTime dataInvestimento;
 
-    @Column(name = "DT_FIM")
+    @Column(name = "DT_LIBERACAO")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
-    private LocalDateTime dataFim;
+    private LocalDateTime dataLiberacao;
 
     @Column(name = "ST_INVESTIMENTO", length = 1)
     @Enumerated(EnumType.STRING)
     private StatusInvestimento status;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "PK_ROBO_INVESTIDOR")
-    private RoboInvestidor roboInvestidor;
-
-    @Column(name = "VL_ULTIMO_RENDIMENTO")
-    private BigDecimal valorUltimoRendimento;
+    @Column(name = "IS_LIBERADO_SAQUE")
+    private Boolean isLiberadoSaque;
 
     @Column(name = "IS_ULTIMO_RENDIMENTO_LOSS")
     private Boolean isUltimoRendimentoLoss;
 
+    @Column(name = "DT_CREATED_AT")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    private LocalDateTime dataCadastro;
+
+    @Column(name = "DT_UPDATED_AT")
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
+    private LocalDateTime dataAlteracao;
+
     @PrePersist
     protected void onCreate() {
-        dataInicio = LocalDateTime.now();
+        dataInvestimento = LocalDateTime.now();
+        dataCadastro = LocalDateTime.now();
+    }
+
+    @PreUpdate
+    protected void onUpdate() {
+        dataAlteracao = LocalDateTime.now();
     }
 }

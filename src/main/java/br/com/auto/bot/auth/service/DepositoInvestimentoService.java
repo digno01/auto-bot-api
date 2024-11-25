@@ -39,16 +39,16 @@ public class DepositoInvestimentoService {
     @Autowired
     private SaqueRepository saqueRepository;
 
-    public DepositoResponseDTO processarDepositoEInvestimento(DepositoRequestDTO request) {
+    public DepositoResponseDTO processarDepositoEInvestimento(DepositoRequestDTO request, Long usuarioId) {
         try {
-            User usuario = userRepository.findById(request.getUsuarioId())
+            User usuario = userRepository.findById(usuarioId)
                     .orElseThrow(() -> new BussinessException("Usuário não encontrado"));
 
             RoboInvestidor novoRobo = roboRepository.findById(request.getRoboId())
                     .orElseThrow(() -> new BussinessException("Robô não encontrado"));
 
             Optional<Investimento> investimentoAtivoOpt = investimentoRepository
-                    .findByUsuarioAndStatus(usuario, StatusInvestimento.A);
+                    .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, novoRobo, StatusInvestimento.A);
 
             // Validar limites considerando investimento existente
             validarLimitesInvestimento(investimentoAtivoOpt, novoRobo, request.getValorDeposito(), usuario);
@@ -95,7 +95,7 @@ public class DepositoInvestimentoService {
 
             if (roboAtual.getId().equals(novoRobo.getId())) {
                 // Mesmo robô - validar limite máximo considerando valor já investido
-                BigDecimal totalAposDeposito = investimentoAtivo.getValorInvestido()
+                BigDecimal totalAposDeposito = investimentoAtivo.getValorInicial()
                         .subtract(totalSaques)
                         .add(valorDeposito);
 
@@ -107,8 +107,9 @@ public class DepositoInvestimentoService {
                     ));
                 }
             } else {
+                //TODO ajustar para o novo modelo de rendimentos
                 // Robô diferente - validar limite considerando saldo total
-                BigDecimal saldoTotalAposDeposito = usuario.getSaldoInvestido()
+                /*BigDecimal saldoTotalAposDeposito = usuario.getValorInicial()
                         .add(usuario.getSaldoRendimentos())
                         .subtract(totalSaques)
                         .add(valorDeposito);
@@ -119,7 +120,7 @@ public class DepositoInvestimentoService {
                             saldoTotalAposDeposito,
                             novoRobo.getValorInvestimentoMax()
                     ));
-                }
+                }*/
             }
         } else {
             // Primeiro investimento - validar apenas limite máximo do robô
@@ -140,50 +141,38 @@ public class DepositoInvestimentoService {
 
 
     private Investimento processarInvestimento(User usuario, RoboInvestidor novoRobo, BigDecimal valorDeposito) {
-        Optional<Investimento> investimentoAtivoOpt = investimentoRepository
-                .findByUsuarioAndStatus(usuario, StatusInvestimento.A);
-
-        BigDecimal novoSaldoInvestido;
-
-        if (investimentoAtivoOpt.isPresent()) {
-            Investimento investimentoAtivo = investimentoAtivoOpt.get();
-            RoboInvestidor roboAtual = investimentoAtivo.getRoboInvestidor();
-
-            if (novoRobo.getDiasPeriodo() < roboAtual.getDiasPeriodo()) {
-                novoSaldoInvestido = usuario.getSaldoInvestido()
-                        .add(usuario.getSaldoRendimentos())
-                        .add(valorDeposito);
-
-                usuario.setSaldoRendimentos(BigDecimal.ZERO);
-            } else {
-                novoSaldoInvestido = usuario.getSaldoInvestido().add(valorDeposito);
-            }
-
-            // Finalizar investimento atual
-            investimentoAtivo.setStatus(StatusInvestimento.F);
-            investimentoAtivo.setDataFim(LocalDateTime.now());
-            investimentoRepository.save(investimentoAtivo);
-        } else {
-            novoSaldoInvestido = valorDeposito;
-        }
+//        Optional<Investimento> investimentoAtivoOpt = investimentoRepository
+//                .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, novoRobo, StatusInvestimento.A);
+//
+//        BigDecimal novoSaldoInvestido;
+//
+//        if (investimentoAtivoOpt.isPresent()) {
+//            Investimento investimentoAtivo = investimentoAtivoOpt.get();
+//            RoboInvestidor roboAtual = investimentoAtivo.getRoboInvestidor();
+//
+//            if (novoRobo.getDiasPeriodo() < roboAtual.getDiasPeriodo()) {
+//                novoSaldoInvestido = investimentoAtivo.getSaldoAtual()
+//                        .add(valorDeposito);
+//            } else {
+//                novoSaldoInvestido = investimentoAtivoOpt.get().getSaldoAtual().add(valorDeposito);
+//            }
+//
+//            // Finalizar investimento atual
+//            investimentoAtivo.setStatus(StatusInvestimento.F);
+//            investimentoRepository.save(investimentoAtivo);
+//        } else {
+//            novoSaldoInvestido = valorDeposito;
+//        }
 
         // Criar novo investimento
+
         Investimento novoInvestimento = new Investimento();
         novoInvestimento.setUsuario(usuario);
         novoInvestimento.setRoboInvestidor(novoRobo);
-        novoInvestimento.setValorInvestido(novoSaldoInvestido);
-        novoInvestimento.setStatus(StatusInvestimento.A); // Ativo
-        novoInvestimento.setPercentualRendimentoDiario(
-                calcularPercentualRendimentoDiario(novoRobo)
-        );
-
-        // Atualizar saldos do usuário
-        usuario.setSaldoInvestido(novoSaldoInvestido);
-        usuario.setSaldoDisponivel(
-                usuario.getSaldoDisponivel().subtract(valorDeposito)
-        );
-        userRepository.save(usuario);
-
+        novoInvestimento.setValorInicial(valorDeposito);
+        novoInvestimento.setSaldoAtual(valorDeposito);
+        novoInvestimento.setStatus(StatusInvestimento.A);
+        novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(novoRobo.getDiasPeriodo()));
         return investimentoRepository.save(novoInvestimento);
     }
 
@@ -202,12 +191,10 @@ public class DepositoInvestimentoService {
                 deposito.getStatus().getDescricao(),
                 investimento.getStatus().getDescricao(),
                 deposito.getDataDeposito(),
-                investimento.getDataInicio().plusDays(
+                investimento.getDataInvestimento().plusDays(
                         investimento.getRoboInvestidor().getDiasPeriodo()
                 ),
-                investimento.getRoboInvestidor().getNome(),
-                investimento.getUsuario().getSaldoInvestido(),
-                investimento.getUsuario().getSaldoRendimentos()
+                investimento.getRoboInvestidor().getNome()
         );
     }
 }
