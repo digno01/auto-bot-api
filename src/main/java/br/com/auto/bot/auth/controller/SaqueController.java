@@ -19,6 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/saques")
 @Tag(name = "Saques", description = "Endpoints para gerenciar solicitações de saque.")
+@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class SaqueController {
 
     @Autowired
