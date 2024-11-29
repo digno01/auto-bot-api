@@ -254,19 +254,14 @@ VALUES ('ADMIN', 'Administrador do Sistema'),
 
 
 -- Inserir configurações dos robôs
-INSERT INTO tb_robo_investidor (ds_nome,
-                                nu_dias_periodo,
-                                pc_rendimento_min,
-                                pc_rendimento_max,
-                                vl_investimento_min,
-                                vl_investimento_max)
-VALUES ('ROBO_1D', 1, 2.00, 3.00, 5.00, 10.00),
-       ('ROBO_3D', 3, 2.50, 3.40, 10.00, 50.00),
-       ('ROBO_7D', 7, 3.40, 3.70, 20.00, 100.00),
-       ('ROBO_15D', 15, 3.50, 4.00, 20.00, 200.00),
-       ('ROBO_30D', 30, 3.50, 4.50, 20.00, 200.00),
-       ('ROBO_90D', 90, 3.50, 6.00, 50.00, 500.00),
-       ('ROBO_180D', 180, 4.15, 10.00, 100.00, 5000.00);
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(1, 'ROBO_1D', 1, 3.00, 3.00, 5.00, 10.00, true, '2024-11-23 18:04:32.358');
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(2, 'ROBO_3D', 3, 3.40, 3.40, 10.00, 50.00, true, '2024-11-23 18:04:32.358');
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(3, 'ROBO_7D', 7, 3.50, 3.50, 20.00, 100.00, true, '2024-11-23 18:04:32.358');
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(4, 'ROBO_15D', 15, 3.70, 3.70, 20.00, 200.00, true, '2024-11-23 18:04:32.358');
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(5, 'ROBO_30D', 30, 4.00, 4.00, 20.00, 200.00, true, '2024-11-23 18:04:32.358');
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(6, 'ROBO_90D', 90, 4.15, 4.15, 50.00, 500.00, true, '2024-11-23 18:04:32.358');
+INSERT INTO tb_robo_investidor (pk_robo_investidor, ds_nome, nu_dias_periodo, pc_rendimento_min, pc_rendimento_max, vl_investimento_min, vl_investimento_max, is_active, dt_created_at) VALUES(7, 'ROBO_180D', 180, 4.25, 4.25, 100.00, 5000.00, true, '2024-11-23 18:04:32.358');
+
 
 CREATE INDEX idx_rendimento_data ON tb_rendimento (dt_rendimento);
 

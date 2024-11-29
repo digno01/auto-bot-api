@@ -5,6 +5,7 @@ import br.com.auto.bot.auth.enums.TipoRendimento;
 import br.com.auto.bot.auth.mapper.RendimentoMapper;
 import br.com.auto.bot.auth.model.Rendimento;
 import br.com.auto.bot.auth.repository.RendimentoRepository;
+import br.com.auto.bot.auth.service.RendimentoService;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -31,6 +32,9 @@ public class RendimentoController {
 
     @Autowired
     private RendimentoRepository rendimentoRepository;
+
+    @Autowired
+    private RendimentoService rendimentoService;
     private final RendimentoMapper rendimentoMapper;
 
     public RendimentoController(RendimentoMapper rendimentoMapper) {

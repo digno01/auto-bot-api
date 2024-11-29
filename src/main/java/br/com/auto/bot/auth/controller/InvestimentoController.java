@@ -44,7 +44,7 @@ public class InvestimentoController {
             @ApiResponse(responseCode = "200", description = "Lista de investimentos ativos retornada com sucesso."),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
     })
-    @GetMapping("/ativos/{usuarioId}")
+    @GetMapping("/ativos")
     public ResponseEntity<List<InvestimentoResponseDTO>> buscarInvestimentosAtivos() {
         Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
         return ResponseEntity.ok(investimentoService.buscarInvestimentosAtivos(usuarioId));

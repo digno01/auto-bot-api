@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.repository;
 
 import br.com.auto.bot.auth.enums.TipoResultado;
+import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.Rendimento;
 import br.com.auto.bot.auth.model.User;
 import feign.Param;
@@ -31,6 +32,12 @@ public interface RendimentoRepository extends JpaRepository<Rendimento, Long> {
             @Param("tipoResultado") TipoResultado tipoResultado,
             @Param("inicio") LocalDateTime inicio,
             @Param("fim") LocalDateTime fim
+    );
+
+    List<Rendimento> findByInvestimentoAndDataRendimentoBetweenOrderByDataRendimentoDesc(
+            Investimento investimento,
+            LocalDateTime dataInicial,
+            LocalDateTime dataFinal
     );
 }
 
