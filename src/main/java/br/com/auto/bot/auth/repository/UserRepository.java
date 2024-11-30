@@ -34,4 +34,8 @@ public interface UserRepository  extends GenericEntityDeletedRepository<User, Lo
     List<User> findUsersWithActiveInvestmentsAndPositiveBalance(@Param("saldo") BigDecimal saldo);
 
     Optional<User> findByCodigoIndicacao(String codigoIndicacao);
+
+    @Query("SELECT u FROM User u WHERE u.id = :id")
+    Optional<User> findByIdWithoutContacts(@Param("id") Long id);
+
 }

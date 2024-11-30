@@ -53,6 +53,13 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
 
     Optional<Investimento> findByUsuarioAndStatus(User usuario, StatusInvestimento status);
 
+    @Query("SELECT i FROM Investimento i WHERE i.usuario = :usuario " +
+            "AND i.roboInvestidor = :robo " +
+            "AND i.status NOT IN ('F', 'C') " +
+            "AND i.saldoAtual > 0")
+    Optional<Investimento> findByUsuarioAndRoboAndStatusNotFinalizedOrCanceled(
+            @Param("usuario") User usuario,
+            @Param("robo") RoboInvestidor robo);
     List<Investimento> findByUsuarioIdAndStatus(Long usuarioId, StatusInvestimento status);
 
     // Busca o investimento mais recente por usuário e status

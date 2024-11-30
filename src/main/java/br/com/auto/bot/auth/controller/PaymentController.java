@@ -1,7 +1,10 @@
 package br.com.auto.bot.auth.controller;
 
 import br.com.auto.bot.auth.dto.PaymentRequestDTO;
+import br.com.auto.bot.auth.dto.QrCodeRequestDTO;
+import br.com.auto.bot.auth.dto.QrCodeResponseDTO;
 import br.com.auto.bot.auth.dto.WithdrawalRequestDTO;
+import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
 import br.com.auto.bot.auth.service.PaymentGatewayService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -20,8 +23,8 @@ public class PaymentController {
     }
 
     @PostMapping("/qrcode")
-    public ResponseEntity<Map> generateQRCode(@RequestBody PaymentRequestDTO request) {
-        return paymentGatewayService.generatePaymentQRCode(request);
+    public ResponseEntity<QrCodeResponseDTO> generateQRCode(@RequestBody QrCodeRequestDTO request) throws RegistroNaoEncontradoException {
+        return ResponseEntity.ok(paymentGatewayService.generatePaymentQRCode(request));
     }
 
     @PostMapping("/withdrawal")

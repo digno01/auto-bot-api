@@ -28,17 +28,17 @@ public class InvestimentoController {
     @Autowired
     private InvestimentoService investimentoService;
 
-    @Operation(summary = "Realizar investimento", description = "Processa um novo investimento.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Investimento realizado com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Erro na validação dos dados do investimento."),
-            @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
-    })
-    @PostMapping
-    public ResponseEntity<InvestimentoResponseDTO> realizarInvestimento(
-            @RequestBody @Valid InvestimentoRequestDTO request) {
-        return ResponseEntity.ok(investimentoService.processarInvestimento(request));
-    }
+//    @Operation(summary = "Realizar investimento", description = "Processa um novo investimento.")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Investimento realizado com sucesso."),
+//            @ApiResponse(responseCode = "400", description = "Erro na validação dos dados do investimento."),
+//            @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
+//    })
+//    @PostMapping
+//    public ResponseEntity<InvestimentoResponseDTO> realizarInvestimento(
+//            @RequestBody @Valid InvestimentoRequestDTO request) {
+//        return ResponseEntity.ok(investimentoService.processarInvestimento(request));
+//    }
 
     @Operation(summary = "Buscar investimentos ativos", description = "Retorna uma lista de investimentos ativos de um usuário.")
     @ApiResponses(value = {

@@ -452,3 +452,6 @@ CREATE INDEX idx_operacao_cripto_rendimento ON TB_OPERACAO_CRIPTO(PK_RENDIMENTO)
 CREATE INDEX idx_operacao_cripto_moeda ON TB_OPERACAO_CRIPTO(DS_MOEDA);
 CREATE INDEX idx_operacao_cripto_data_compra ON TB_OPERACAO_CRIPTO(DT_COMPRA);
 
+ALTER TABLE tb_investimento ADD id_transaction_gateway numeric(15) NOT NULL DEFAULT 0;
+ALTER TABLE public.tb_investimento ADD url_qr_code varchar(200) NULL;
+CREATE INDEX idx_transaction_gateway ON tb_investimento(id_transaction_gateway);

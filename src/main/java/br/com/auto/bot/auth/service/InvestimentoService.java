@@ -1,9 +1,6 @@
 package br.com.auto.bot.auth.service;
 
-import br.com.auto.bot.auth.dto.InvestimentoRequestDTO;
-import br.com.auto.bot.auth.dto.InvestimentoResponseDTO;
-import br.com.auto.bot.auth.dto.InvestimentoResumoDTO;
-import br.com.auto.bot.auth.dto.InvestimentoSaqueDTO;
+import br.com.auto.bot.auth.dto.*;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.exceptions.BussinessException;
 import br.com.auto.bot.auth.model.Investimento;
@@ -11,12 +8,14 @@ import br.com.auto.bot.auth.model.RoboInvestidor;
 import br.com.auto.bot.auth.model.User;
 import br.com.auto.bot.auth.projection.InvestimentoResumoProjection;
 import br.com.auto.bot.auth.repository.*;
+import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -51,15 +50,14 @@ public class InvestimentoService {
             RoboInvestidor robo = roboRepository.findById(request.getRoboId())
                     .orElseThrow(() -> new BussinessException("Robô não encontrado"));
 
-            validarInvestimento(usuario, robo, request);
-
-            if ("NOVO".equals(request.getTipoOperacao())) {
-                return realizarNovoInvestimento(usuario, robo, request.getValorInvestimento());
+            validarValorMaximoMinimoInvestimento(robo, request.getValorInvestimento());
+            return realizarNovoInvestimento(usuario, robo, request.getValorInvestimento(), request.getIdTransacaoPagamentoGateway());
+            //if ("NOVO".equals(request.getTipoOperacao())) {
             /*} else if ("TROCA".equals(request.getTipoOperacao())) {
                 return realizarTrocaRobo(usuario, robo);*/
-            } else {
+            /*} else {
                 throw new BussinessException("Tipo de operação inválido");
-            }
+            }*/
 
         } catch (Exception e) {
             log.error("Erro ao processar investimento: {}", e.getMessage());
@@ -67,108 +65,56 @@ public class InvestimentoService {
         }
     }
 
-    private void validarInvestimento(User usuario, RoboInvestidor robo, InvestimentoRequestDTO request) {
+    private void validarValorMaximoMinimoInvestimento(RoboInvestidor robo, BigDecimal valorInvestimento) {
         // Validação de valor mínimo e máximo
-        if (request.getValorInvestimento().compareTo(robo.getValorInvestimentoMin()) < 0) {
+        if (valorInvestimento.compareTo(robo.getValorInvestimentoMin()) < 0) {
             throw new BussinessException("Valor abaixo do mínimo permitido para este robô");
         }
-        if (request.getValorInvestimento().compareTo(robo.getValorInvestimentoMax()) > 0) {
+        if (valorInvestimento.compareTo(robo.getValorInvestimentoMax()) > 0) {
             throw new BussinessException("Valor acima do máximo permitido para este robô");
-        }
-
-        // Validação de saldo disponível para novo investimento
-//        if ("NOVO".equals(request.getTipoOperacao())) {
-//            if (usuario.getSaldoDisponivel().compareTo(request.getValorInvestimento()) < 0) {
-//                throw new BussinessException("Saldo disponível insuficiente");
-//            }
-//            return;
-//        }
-
-        // Validações apenas para troca de robô
-        if ("TROCA".equals(request.getTipoOperacao())) {
-            Optional<Investimento> investimentoAtivo = investimentoRepository
-                    .findByUsuarioAndStatus(usuario, StatusInvestimento.A);
-
-            if (investimentoAtivo.isEmpty()) {
-                throw new BussinessException("Não há investimento ativo para realizar a troca");
-            }
-
-            if (LocalDateTime.now().isBefore(
-                    investimentoAtivo.get().getDataInvestimento()
-                            .plusDays(investimentoAtivo.get().getRoboInvestidor().getDiasPeriodo()))) {
-                throw new BussinessException("Período mínimo não atingido para troca de robô");
-            }
         }
     }
 
     private InvestimentoResponseDTO realizarNovoInvestimento(
             User usuario,
             RoboInvestidor robo,
-            BigDecimal valor) {
+            BigDecimal valor,
+            BigDecimal idTransacaoPagamentoGateway) {
 
         Optional<Investimento> investimentoExistente = investimentoRepository
                 .findByUsuarioAndStatus(usuario, StatusInvestimento.A);
-
         if (investimentoExistente.isPresent()) {
+            validarValorUtrapassaComInvestimentoAtivo(investimentoExistente.get(), valor, robo);
             Investimento investimentoAtual = investimentoExistente.get();
-            investimentoAtual.setValorInicial(valor);
-            investimentoAtual.setSaldoAtual(valor);
+            Investimento novoInvestimento = new Investimento();
+
+            BigDecimal valorAcumulado = investimentoAtual.getSaldoAtual().add(valor);
+            novoInvestimento.setValorInicial(valorAcumulado);
+            novoInvestimento.setSaldoAtual(valorAcumulado);
+            novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(robo.getDiasPeriodo()));
+            novoInvestimento.setStatus(StatusInvestimento.P);
+            novoInvestimento.setIdTransacaoPagamentoGateway(idTransacaoPagamentoGateway);
+            investimentoRepository.save(novoInvestimento);
             investimentoRepository.save(investimentoAtual);
-
-//            usuario.setSaldoDisponivel(usuario.getSaldoDisponivel().subtract(valor));
-//            usuario.setSaldoInvestido(usuario.getSaldoInvestido().add(valor));
-            userRepository.save(usuario);
-
             return InvestimentoResponseDTO.fromEntity(investimentoAtual);
         } else {
             Investimento novoInvestimento = new Investimento();
             novoInvestimento.setUsuario(usuario);
             novoInvestimento.setRoboInvestidor(robo);
             novoInvestimento.setValorInicial(valor);
-            novoInvestimento.setStatus(StatusInvestimento.A);
+            novoInvestimento.setStatus(StatusInvestimento.P);
             novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(robo.getDiasPeriodo()));
-//            usuario.setSaldoDisponivel(usuario.getSaldoDisponivel().subtract(valor));
-//            usuario.setSaldoInvestido(usuario.getSaldoInvestido().add(valor));
+            novoInvestimento.setIdTransacaoPagamentoGateway(idTransacaoPagamentoGateway);
             userRepository.save(usuario);
 
             return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));
         }
     }
 
-  /*  private InvestimentoResponseDTO realizarTrocaRobo(User usuario, RoboInvestidor novoRobo) {
-        Investimento investimentoAtual = investimentoRepository
-                .findByUsuarioAndStatus(usuario, StatusInvestimento.A)
-                .orElseThrow(() -> new BussinessException("Investimento ativo não encontrado"));
-
-        BigDecimal saldoTotal = usuario.getSaldoInvestido().add(usuario.getSaldoRendimentos());
-
-        // Registra histórico
-        HistoricoTrocaRobo historico = new HistoricoTrocaRobo();
-        historico.setUsuario(usuario);
-        historico.setRoboOrigem(investimentoAtual.getRoboInvestidor());
-        historico.setRoboDestino(novoRobo);
-        historico.setSaldoTransferido(usuario.getSaldoInvestido());
-        historico.setRendimentosIncorporados(usuario.getSaldoRendimentos());
-        historicoRepository.save(historico);
-
-        // Finaliza investimento atual
-        investimentoAtual.setStatus(StatusInvestimento.F);
-        investimentoRepository.save(investimentoAtual);
-
-        // Cria novo investimento
-        Investimento novoInvestimento = new Investimento();
-        novoInvestimento.setUsuario(usuario);
-        novoInvestimento.setRoboInvestidor(novoRobo);
-        novoInvestimento.setValorInicial(saldoTotal);
-        novoInvestimento.setStatus(StatusInvestimento.A);
-
-        // Atualiza saldos
-        usuario.setSaldoInvestido(saldoTotal);
-        usuario.setSaldoRendimentos(BigDecimal.ZERO);
-        userRepository.save(usuario);
-
-        return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));
-    }*/
+    private void validarValorUtrapassaComInvestimentoAtivo(Investimento investimento, BigDecimal valor, RoboInvestidor robo) {
+        BigDecimal valorAcumulado = investimento.getSaldoAtual().add(valor);
+        validarValorMaximoMinimoInvestimento(robo, valorAcumulado);
+    }
 
     private BigDecimal calcularPercentualRendimentoDiario(RoboInvestidor robo) {
         BigDecimal range = robo.getPercentualRendimentoMax()
@@ -245,5 +191,26 @@ public class InvestimentoService {
                         investimento.getSaldoAtual()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    public void permiteUsuarioInvestir(QrCodeRequestDTO qrCodeRequestDTO) {
+        User usuario = userRepository.findById(ObterDadosUsuarioLogado.getUsuarioLogadoId())
+                .orElseThrow(() -> new BussinessException("Usuário não encontrado"));
+
+        RoboInvestidor robo = roboRepository.findById(qrCodeRequestDTO.getIdRobo())
+                .orElseThrow(() -> new BussinessException("Robô não encontrado"));
+        Optional<Investimento> optInvestimento =  investimentoRepository.findByUsuarioAndRoboAndStatusNotFinalizedOrCanceled(usuario, robo);
+        if(optInvestimento.isEmpty()){
+            return;
+        }
+        Investimento investimento = optInvestimento.get();
+        if(investimento.getStatus().equals(StatusInvestimento.A)){
+            BigDecimal valorAcumulado = investimento.getSaldoAtual().add(qrCodeRequestDTO.getAmount());
+            validarValorMaximoMinimoInvestimento(robo, valorAcumulado);
+        }else if(investimento.getStatus().equals(StatusInvestimento.P) || investimento.getStatus().equals(StatusInvestimento.R)){
+            throw new BussinessException(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getNome() + " você já tem um investimento para o robô aguardando pagamento.");
+        }
+
+
     }
 }

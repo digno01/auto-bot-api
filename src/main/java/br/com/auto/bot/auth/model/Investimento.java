@@ -22,6 +22,9 @@ public class Investimento implements Serializable {
     @Column(name = "PK_INVESTIMENTO")
     private Long id;
 
+    @Column(name = "ID_TRANSACTION_GATEWAY")
+    private BigDecimal idTransacaoPagamentoGateway;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "PK_USUARIO")
     private User usuario;

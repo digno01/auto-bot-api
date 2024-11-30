@@ -126,6 +126,16 @@ public class UserService extends GenericService<User, Long> {
         return userEntity;
     }
 
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public Optional<User> findByIdWithOutContacts(Long id) throws RegistroNaoEncontradoException {
+        Optional<User> opt =  repository.findByIdWithoutContacts(id);
+        if(!opt.isPresent()){
+            throw new RegistroNaoEncontradoException("Código de indicação não encontrado");
+        }
+        return opt;
+    }
+
+
     public User save(User entity, UserDTO dto) throws RegistroNaoEncontradoException {
         entity.setContato(null);
         entity.setPassword(passwordEncoder.encode(entity.getPassword()));

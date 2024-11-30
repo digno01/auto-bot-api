@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.model;
 
 import br.com.auto.bot.auth.generic.interfaces.IDeletedTable;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -23,6 +24,7 @@ public class Contact implements IDeletedTable, Serializable {
     @Column(name = "PK_CONTATO", updatable = false, nullable = false)
     private Long id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name="PK_USUARIO")
     private User user;

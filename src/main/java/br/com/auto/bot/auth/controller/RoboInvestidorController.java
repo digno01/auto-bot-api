@@ -46,17 +46,17 @@ public class RoboInvestidorController {
         return ResponseEntity.ok(service.findById(id));
     }
 
-    @Operation(summary = "Criar novo robô",
-            description = "Cria um novo robô investidor com as configurações especificadas.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Robô criado com sucesso"),
-            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
-            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
-    })
-    @PostMapping
-    public ResponseEntity<RoboInvestidor> create(@RequestBody RoboInvestidor roboInvestidor) {
-        return ResponseEntity.ok(service.save(roboInvestidor));
-    }
+//    @Operation(summary = "Criar novo robô",
+//            description = "Cria um novo robô investidor com as configurações especificadas.")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Robô criado com sucesso"),
+//            @ApiResponse(responseCode = "400", description = "Dados inválidos fornecidos"),
+//            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+//    })
+//    @PostMapping
+//    public ResponseEntity<RoboInvestidor> create(@RequestBody RoboInvestidor roboInvestidor) {
+//        return ResponseEntity.ok(service.save(roboInvestidor));
+//    }
 
     @Operation(summary = "Atualizar robô",
             description = "Atualiza as configurações de um robô investidor existente.")
