@@ -55,7 +55,7 @@ public class RendimentoDiarioService {
     private List<CriptoData> criptosDiarios;
 
     @Transactional
-    @Scheduled(cron = "0 */1 * * * *")
+    @Scheduled(cron = "0 */30 * * * *")
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 

@@ -17,7 +17,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("${app.api.url}/perfil-acesso")
 @Tag(name = "Perfil", description = "Este controlador fornece operações para obter perfis pré-cadastrados no sistema.")
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
+//@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class PerfilAcessoController extends GenericController<PerfilAcesso, PerfilAcessoDTO, Long> {
 
     private final PerfilAcessoService service;

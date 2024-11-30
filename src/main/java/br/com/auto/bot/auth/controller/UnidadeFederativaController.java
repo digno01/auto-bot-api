@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("${app.api.url.public}/unidade-federativa")
 @Tag(name = "Unidade Federativa", description = "Este controlador fornece operações para obter unidades federativas.")
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
+//@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class UnidadeFederativaController {
 
     @Operation(summary = "Listar unidades federativas", description = "Retorna uma lista de todas as unidades federativas disponíveis.")

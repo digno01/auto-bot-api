@@ -22,7 +22,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/investimentos")
 @Slf4j
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
+//@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class InvestimentoController {
 
     @Autowired

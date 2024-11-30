@@ -30,7 +30,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/rendimentos")
 @Tag(name = "Rendimentos", description = "Endpoints para gerenciar rendimentos dos usuários.")
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
+//@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class RendimentoController {
 
     @Autowired

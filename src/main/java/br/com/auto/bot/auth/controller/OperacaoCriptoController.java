@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/operacoes")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
+//@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class OperacaoCriptoController {
 
     private final OperacaoCriptoRepository operacaoCriptoRepository;

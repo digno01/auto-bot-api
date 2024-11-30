@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/robo-investidor")
 @Tag(name = "Robô Investidor", description = "Endpoints para gerenciar robôs de investimento automatizado.")
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
+//@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class RoboInvestidorController {
 
     @Autowired
@@ -30,7 +30,8 @@ public class RoboInvestidorController {
     })
     @GetMapping
     public ResponseEntity<Page<RoboInvestidor>> findAll(CustomPageable pageRequest) {
-        return ResponseEntity.ok(service.findAll(pageRequest.toPageable()));
+        Page<RoboInvestidor> page = service.findAll(pageRequest.toPageable());
+        return ResponseEntity.ok(page);
     }
 
     @Operation(summary = "Buscar robô por ID",
