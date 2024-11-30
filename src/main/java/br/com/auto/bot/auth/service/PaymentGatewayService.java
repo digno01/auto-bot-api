@@ -4,7 +4,6 @@ import br.com.auto.bot.auth.dto.*;
 import br.com.auto.bot.auth.exceptions.PaymentException;
 import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
 import br.com.auto.bot.auth.model.User;
-import br.com.auto.bot.auth.service.feign.PaymentClient;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -38,8 +37,6 @@ public class PaymentGatewayService {
     private final UserService userService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    @Autowired
-    private PaymentClient paymentClient;
 
     public PaymentGatewayService(
             RestTemplate restTemplate,
