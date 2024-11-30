@@ -51,7 +51,7 @@ public class InvestimentoService {
                     .orElseThrow(() -> new BussinessException("Robô não encontrado"));
 
             validarValorMaximoMinimoInvestimento(robo, request.getValorInvestimento());
-            return realizarNovoInvestimento(usuario, robo, request.getValorInvestimento(), request.getIdTransacaoPagamentoGateway());
+            return realizarNovoInvestimento(usuario, robo, request);
             //if ("NOVO".equals(request.getTipoOperacao())) {
             /*} else if ("TROCA".equals(request.getTipoOperacao())) {
                 return realizarTrocaRobo(usuario, robo);*/
@@ -78,33 +78,36 @@ public class InvestimentoService {
     private InvestimentoResponseDTO realizarNovoInvestimento(
             User usuario,
             RoboInvestidor robo,
-            BigDecimal valor,
-            BigDecimal idTransacaoPagamentoGateway) {
+            InvestimentoRequestDTO request) {
 
         Optional<Investimento> investimentoExistente = investimentoRepository
                 .findByUsuarioAndStatus(usuario, StatusInvestimento.A);
         if (investimentoExistente.isPresent()) {
-            validarValorUtrapassaComInvestimentoAtivo(investimentoExistente.get(), valor, robo);
+            validarValorUtrapassaComInvestimentoAtivo(investimentoExistente.get(), request.getValorInvestimento(), robo);
             Investimento investimentoAtual = investimentoExistente.get();
             Investimento novoInvestimento = new Investimento();
 
-            BigDecimal valorAcumulado = investimentoAtual.getSaldoAtual().add(valor);
+            BigDecimal valorAcumulado = investimentoAtual.getSaldoAtual().add(request.getValorInvestimento());
             novoInvestimento.setValorInicial(valorAcumulado);
             novoInvestimento.setSaldoAtual(valorAcumulado);
             novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(robo.getDiasPeriodo()));
             novoInvestimento.setStatus(StatusInvestimento.P);
-            novoInvestimento.setIdTransacaoPagamentoGateway(idTransacaoPagamentoGateway);
+            novoInvestimento.setIdTransacaoPagamentoGateway(request.getIdTransacaoPagamentoGateway());
+            novoInvestimento.setUrlQrcode(request.getUrlQrcode());
             investimentoRepository.save(novoInvestimento);
+
+            investimentoAtual.setStatus(StatusInvestimento.R);
             investimentoRepository.save(investimentoAtual);
             return InvestimentoResponseDTO.fromEntity(investimentoAtual);
         } else {
             Investimento novoInvestimento = new Investimento();
             novoInvestimento.setUsuario(usuario);
             novoInvestimento.setRoboInvestidor(robo);
-            novoInvestimento.setValorInicial(valor);
+            novoInvestimento.setValorInicial(request.getValorInvestimento());
             novoInvestimento.setStatus(StatusInvestimento.P);
             novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(robo.getDiasPeriodo()));
-            novoInvestimento.setIdTransacaoPagamentoGateway(idTransacaoPagamentoGateway);
+            novoInvestimento.setIdTransacaoPagamentoGateway(request.getIdTransacaoPagamentoGateway());
+            novoInvestimento.setUrlQrcode(request.getUrlQrcode());
             userRepository.save(usuario);
 
             return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));

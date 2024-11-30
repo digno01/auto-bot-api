@@ -16,4 +16,5 @@ public class InvestimentoRequestDTO {
     private BigDecimal valorInvestimento;
     private String tipoOperacao; // "NOVO" ou "TROCA"
     private BigDecimal idTransacaoPagamentoGateway;
+    private String urlQrcode;
 }

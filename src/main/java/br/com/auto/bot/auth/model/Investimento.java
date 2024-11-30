@@ -65,6 +65,9 @@ public class Investimento implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataAlteracao;
 
+    @Column(name = "url_qr_code")
+    private String urlQrcode;
+
     @PrePersist
     protected void onCreate() {
         dataInvestimento = LocalDateTime.now();

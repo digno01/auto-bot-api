@@ -8,7 +8,6 @@ import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -16,9 +15,7 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
-
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -69,7 +66,7 @@ public class PaymentGatewayService {
         Document document =  new Document();
         Item item = new Item();
         Optional<User> optUser = userService.findByIdWithOutContacts(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId());
-        item.setUnitPrice(qrCodeRequestDTO.getAmount());
+        item.setUnitPrice(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")));
         request.getItems().add(item);
         request.setPostbackUrl(this.callBackPix);
         request.setPercentSplit(this.percentualDeposito);
@@ -84,17 +81,8 @@ public class PaymentGatewayService {
         custumer.setPhone(user.getContato().get(0).getDdd().toString() +  user.getContato().get(0).getNumero().toString());
         request.setCustomer(custumer);
 
-        request.setAmount(qrCodeRequestDTO.getAmount());
+        request.setAmount(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")));
         request.setPaymentMethod("pix");
-        // Aqui estamos usando Jackson para converter o objeto request em JSON
-        try {
-
-            String jsonRequest = objectMapper.writeValueAsString(request);
-            System.out.println("JSON Request: " + jsonRequest);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
         // Criar entity com headers e body
         HttpEntity<PaymentRequestDTO> entity = new HttpEntity<>(request, headers);
 
@@ -110,35 +98,36 @@ public class PaymentGatewayService {
             if (response.getStatusCode().value() == HttpStatus.OK.value()) {
                 PaymentResponseDTO responseBody =  objectMapper.readValue(response.getBody(), PaymentResponseDTO.class);
                 if (responseBody != null && "success".equals(responseBody.getStatus())) {
-                    // Processar a transação e o ID da transação
                     String transactionId = responseBody.getTransaction().getId();
-                    investValorQrCode(qrCodeRequestDTO, new BigDecimal(transactionId));
+                    investValorQrCode(qrCodeRequestDTO, new BigDecimal(transactionId), responseBody.getTransaction().getPix_image_base64());
                     QrCodeResponseDTO retorno = new QrCodeResponseDTO();
                     retorno.setUrlQrCode(responseBody.getTransaction().getPix_image_base64());
                     retorno.setIdTransacao(transactionId);
                     return  retorno;
-
                 }
             }
 
         } catch (JsonProcessingException e) {
-            throw new RuntimeException("Erro ao processar resposta JSON", e);
+            throw new RuntimeException("Erro no processamento do QRCode", e);
         }
         return null;
     }
 
-    private void investValorQrCode(QrCodeRequestDTO qrCodeRequestDTO, BigDecimal idTransacaoPagamentoGatway) {
+    private void investValorQrCode(QrCodeRequestDTO qrCodeRequestDTO, BigDecimal idTransacaoPagamentoGatway, String qrCode) {
         InvestimentoRequestDTO investimento = new InvestimentoRequestDTO();
         investimento.setUsuarioId(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId());
         investimento.setValorInvestimento(qrCodeRequestDTO.getAmount());
         investimento.setRoboId(qrCodeRequestDTO.getIdRobo());
         investimento.setIdTransacaoPagamentoGateway(idTransacaoPagamentoGatway);
+        investimento.setUrlQrcode(qrCode);
         investimentoService.processarInvestimento(investimento);
     }
 
-    public ResponseEntity<Map> makeWithdrawal(WithdrawalRequestDTO request) {
+    public ResponseEntity<Map> makeWithdrawal(SaqueDTO request) {
         HttpHeaders headers = createHeaders();
-        HttpEntity<WithdrawalRequestDTO> entity = new HttpEntity<>(request, headers);
+        WithdrawalRequestDTO saque = new WithdrawalRequestDTO();
+
+        HttpEntity<WithdrawalRequestDTO> entity = new HttpEntity<>(saque, headers);
 
         try {
             return restTemplate.exchange(

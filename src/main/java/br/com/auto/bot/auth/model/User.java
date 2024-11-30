@@ -100,6 +100,8 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
 
     @Column(name = "DS_CODIGO_INDICACAO", length = 8, unique = true)
     private String codigoIndicacao;
+    @Column(name = "AVATAR", length = 50, unique = true)
+    private String avatar;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

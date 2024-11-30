@@ -1,9 +1,6 @@
 package br.com.auto.bot.auth.controller;
 
-import br.com.auto.bot.auth.dto.PaymentRequestDTO;
-import br.com.auto.bot.auth.dto.QrCodeRequestDTO;
-import br.com.auto.bot.auth.dto.QrCodeResponseDTO;
-import br.com.auto.bot.auth.dto.WithdrawalRequestDTO;
+import br.com.auto.bot.auth.dto.*;
 import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
 import br.com.auto.bot.auth.service.PaymentGatewayService;
 import org.springframework.http.ResponseEntity;
@@ -28,14 +25,13 @@ public class PaymentController {
     }
 
     @PostMapping("/withdrawal")
-    public ResponseEntity<Map> processWithdrawal(@RequestBody WithdrawalRequestDTO request) {
+    public ResponseEntity<Map> processWithdrawal(@RequestBody SaqueDTO request) {
         return paymentGatewayService.makeWithdrawal(request);
     }
 
-    @PostMapping("/callback")
-    public ResponseEntity<Void> handleCallback(@RequestBody Map<String, Object> callback) {
-        // Processar o callback
-        // Implementar lógica de processamento do callback
-        return ResponseEntity.ok().build();
+    @PostMapping("/detpay-callback")
+    public ResponseEntity<Void> handleCallback(@RequestBody PaymentCallBackDTO pagamento) {
+        pagamento.toString();
+        return ResponseEntity.status(400).build();
     }
 }

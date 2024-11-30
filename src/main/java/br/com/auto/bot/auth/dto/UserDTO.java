@@ -43,6 +43,8 @@ public class UserDTO extends LoginDTO {
     @Schema(description = "Data de atualização", example = "2024-05-27T02:48:47.625Z")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime updatedAt;
+    @Schema(description = "Nome da imagem do avatar", example = "avt1.png")
+    private String avatar;
 
     @NotEmpty
     private List<ContactDTO> contato;
