@@ -27,7 +27,6 @@ import org.springframework.web.bind.annotation.*;
 @Tag(name = "Autenticação", description = "Endpoints para autenticação e gerenciamento de usuários.")
 @RequestMapping("${app.api.url}/auth")
 @RestController
-@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class AuthenticationController {
     private final JwtService jwtService;
     private final UserService serviceBean;

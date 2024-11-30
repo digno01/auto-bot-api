@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.controller;
 
 import br.com.auto.bot.auth.dto.RendimentoDTO;
 import br.com.auto.bot.auth.enums.TipoRendimento;
+import br.com.auto.bot.auth.exceptions.BussinessException;
 import br.com.auto.bot.auth.mapper.RendimentoMapper;
 import br.com.auto.bot.auth.model.Rendimento;
 import br.com.auto.bot.auth.repository.RendimentoRepository;
@@ -14,6 +15,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -42,6 +44,45 @@ public class RendimentoController {
         this.rendimentoMapper = rendimentoMapper;
     }
 
+    @Operation(summary = "Obter rendimentos do investimento por período",
+            description = "Retorna uma lista de rendimentos de um investimento específico dentro de um período em dias.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Lista de rendimentos retornada com sucesso."),
+            @ApiResponse(responseCode = "400", description = "Período em dias inválido (deve ser entre 10 e 500)."),
+            @ApiResponse(responseCode = "404", description = "Investimento não encontrado.")
+    })
+    @GetMapping("/investimento/{investimentoId}/periodo")
+    public ResponseEntity<?> getRendimentosInvestimentoPorPeriodo(
+            @Parameter(description = "ID do investimento", required = true)
+            @PathVariable Long investimentoId,
+
+            @Parameter(description = "Período em dias (entre 10 e 500)", example = "30")
+            @RequestParam(defaultValue = "10") Integer dias) {
+
+        try {
+            List<RendimentoDTO> rendimentos = rendimentoService.buscarRendimentosPorPeriodo(investimentoId, dias);
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("rendimentos", rendimentos);
+            response.put("totalRegistros", rendimentos.size());
+            response.put("investimentoId", investimentoId);
+            response.put("periodoEmDias", dias);
+
+            return ResponseEntity.ok(response);
+
+        } catch (IllegalArgumentException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            error.put("status", HttpStatus.BAD_REQUEST.value());
+            return ResponseEntity.badRequest().body(error);
+
+        } catch (BussinessException e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("message", e.getMessage());
+            error.put("status", HttpStatus.NOT_FOUND.value());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+        }
+    }
     @Operation(summary = "Obter rendimentos do usuário", description = "Retorna uma lista de rendimentos do usuário dentro de um período específico.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Lista de rendimentos retornada com sucesso."),
@@ -65,6 +106,7 @@ public class RendimentoController {
 
         return ResponseEntity.ok(rendimentosDTO);
     }
+
 
     @Operation(summary = "Obter resumo dos rendimentos", description = "Retorna um resumo dos rendimentos do usuário dentro de um período específico.")
     @ApiResponses(value = {

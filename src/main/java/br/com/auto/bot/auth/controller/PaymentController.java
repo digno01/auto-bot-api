@@ -1,4 +1,4 @@
-package br.com.auto.bot.auth.config.controller;
+package br.com.auto.bot.auth.controller;
 
 import br.com.auto.bot.auth.dto.PaymentRequestDTO;
 import br.com.auto.bot.auth.dto.WithdrawalRequestDTO;
