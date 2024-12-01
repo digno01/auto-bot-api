@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
-    @ExceptionHandler(BussinessException.class)
-    public ResponseEntity<String> handleBussinessException(BussinessException ex) {
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<String> handleBussinessException(BusinessException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
     }
 

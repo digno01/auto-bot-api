@@ -1,7 +1,9 @@
 package br.com.auto.bot.auth.model;
 
 import br.com.auto.bot.auth.enums.StatusInvestimento;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -27,6 +29,7 @@ public class Investimento implements Serializable {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "PK_USUARIO")
+    @JsonManagedReference
     private User usuario;
 
     @ManyToOne(fetch = FetchType.LAZY)

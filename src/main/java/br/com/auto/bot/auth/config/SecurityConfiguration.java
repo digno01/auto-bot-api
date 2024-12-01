@@ -41,6 +41,7 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests()
                 .requestMatchers("auth-api/v1/auth/**").permitAll() // Permitir acesso a autenticação
                 .requestMatchers("auth-api/v1/public/**").permitAll() // Permitir acesso a autenticação
+                .requestMatchers("api/payments/detpay-callback").permitAll() // Permitir acesso a autenticação
                 //.requestMatchers("auth-api/v1/usuario/**").hasRole("ADMIN")
                 // Permitir acesso ao Swagger
                 .requestMatchers("/v3/api-docs/**").permitAll()

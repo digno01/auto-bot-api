@@ -25,13 +25,13 @@ public class PaymentController {
     }
 
     @PostMapping("/withdrawal")
-    public ResponseEntity<Map> processWithdrawal(@RequestBody SaqueDTO request) {
+    public ResponseEntity<Map> processWithdrawal(@RequestBody SaqueRequestDTO request) {
         return paymentGatewayService.makeWithdrawal(request);
     }
 
     @PostMapping("/detpay-callback")
     public ResponseEntity<Void> handleCallback(@RequestBody PaymentCallBackDTO pagamento) {
-        pagamento.toString();
+        System.out.println(pagamento.toString());
         return ResponseEntity.status(400).build();
     }
 }

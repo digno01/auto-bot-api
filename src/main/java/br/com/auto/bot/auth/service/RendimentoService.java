@@ -1,7 +1,7 @@
 package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.RendimentoDTO;
-import br.com.auto.bot.auth.exceptions.BussinessException;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.mapper.RendimentoMapper;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.Rendimento;
@@ -37,7 +37,7 @@ public class RendimentoService {
 
         // Buscar investimento
         Investimento investimento = investimentoRepository.findById(investimentoId)
-                .orElseThrow(() -> new BussinessException("Investimento não encontrado"));
+                .orElseThrow(() -> new BusinessException("Investimento não encontrado"));
 
         // Calcular período
         LocalDateTime dataInicial = investimento.getDataInvestimento();

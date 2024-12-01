@@ -9,7 +9,7 @@ public class ContatoMock {
 
     public static Contact getContato(User user){
         Contact entity = new Contact();
-        entity.setUser(user);
+        entity.setUserId(user.getId());
         entity.setDdd(45);
         entity.setTipo(1);
         entity.setNumero("459924743");

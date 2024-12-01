@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.converter;
 
 import br.com.auto.bot.auth.enums.TipoRendimento;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
@@ -27,6 +28,6 @@ public class TipoRendimentoConverter implements AttributeConverter<TipoRendiment
             }
         }
 
-        throw new IllegalArgumentException("Código de tipo de rendimento inválido: " + codigo);
+        throw new BusinessException("Código de tipo de rendimento inválido: " + codigo);
     }
 }

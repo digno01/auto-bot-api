@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.generic.service;
 
 
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.generic.repository.GenericEntityDeletedRepository;
 import br.com.auto.bot.auth.generic.interfaces.IDeletedTable;
 import br.com.auto.bot.auth.generic.interfaces.IActiveTable;
@@ -58,7 +59,7 @@ public abstract class GenericService<T, ID> {
     public T update(ID id, T updatedEntity) {
         Optional<T> optionalEntity = this.repository.findById(id);
         if (!optionalEntity.isPresent()) {
-            throw new EntityNotFoundException("Entity with id " + id + " not found");
+            throw new BusinessException("Entity with id " + id + " not found");
         } else {
             T existingEntity = optionalEntity.get();
             Field[] fields = updatedEntity.getClass().getDeclaredFields();

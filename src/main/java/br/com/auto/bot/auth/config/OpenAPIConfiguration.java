@@ -55,6 +55,7 @@ public class OpenAPIConfiguration {
 
 
         return new OpenAPI()
+                .openapi("3.0.0")
                 .info(information)
                 .servers(List.of(server))
                 .components(new io.swagger.v3.oas.models.Components()

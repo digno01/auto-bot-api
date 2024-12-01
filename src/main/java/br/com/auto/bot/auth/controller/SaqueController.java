@@ -25,17 +25,17 @@ public class SaqueController {
     @Autowired
     private SaqueService saqueService; // Serviço que gerencia a lógica de saque
 
-    @Operation(summary = "Solicitar saque", description = "Permite ao usuário solicitar um saque de um investimento.")
-    @ApiResponses(value = {
-            @ApiResponse(responseCode = "200", description = "Saque solicitado com sucesso."),
-            @ApiResponse(responseCode = "400", description = "Erro ao solicitar saque, pode ser devido a saldo insuficiente ou dados inválidos.")
-    })
-    @PostMapping
-    public ResponseEntity<Saque> solicitarSaque(@RequestBody @Valid SaqueRequestDTO request) {
-        Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
-        Saque saque = saqueService.solicitarSaque(request, usuarioId);
-        return ResponseEntity.ok(saque);
-    }
+//    @Operation(summary = "Solicitar saque", description = "Permite ao usuário solicitar um saque de um investimento.")
+//    @ApiResponses(value = {
+//            @ApiResponse(responseCode = "200", description = "Saque solicitado com sucesso."),
+//            @ApiResponse(responseCode = "400", description = "Erro ao solicitar saque, pode ser devido a saldo insuficiente ou dados inválidos.")
+//    })
+//    @PostMapping
+//    public ResponseEntity<Saque> solicitarSaque(@RequestBody @Valid SaqueRequestDTO request) {
+//        Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
+//        Saque saque = saqueService.solicitarSaque(request, usuarioId);
+//        return ResponseEntity.ok(saque);
+//    }
 
     @Operation(summary = "Listar solicitações de saque", description = "Retorna todas as solicitações de saque feitas pelo usuário.")
     @GetMapping

@@ -2,7 +2,7 @@ package br.com.auto.bot.auth.controller;
 
 import br.com.auto.bot.auth.dto.RendimentoDTO;
 import br.com.auto.bot.auth.enums.TipoRendimento;
-import br.com.auto.bot.auth.exceptions.BussinessException;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.mapper.RendimentoMapper;
 import br.com.auto.bot.auth.model.Rendimento;
 import br.com.auto.bot.auth.repository.RendimentoRepository;
@@ -76,7 +76,7 @@ public class RendimentoController {
             error.put("status", HttpStatus.BAD_REQUEST.value());
             return ResponseEntity.badRequest().body(error);
 
-        } catch (BussinessException e) {
+        } catch (BusinessException e) {
             Map<String, Object> error = new HashMap<>();
             error.put("message", e.getMessage());
             error.put("status", HttpStatus.NOT_FOUND.value());

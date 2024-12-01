@@ -4,6 +4,7 @@ import br.com.auto.bot.auth.dto.CriptoData;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.TipoRendimento;
 import br.com.auto.bot.auth.enums.TipoResultado;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
 import lombok.AllArgsConstructor;
@@ -76,21 +77,10 @@ public class RendimentoDiarioService {
 
         } catch (Exception e) {
             log.error("Erro ao processar rendimentos diários: " + e.getMessage(), e);
-            throw new RuntimeException("Erro no processamento de rendimentos", e);
+            throw new BusinessException("Erro no processamento de rendimentos", e);
         }
     }
 
-//    private Investimento buscarOuCriarInvestimentoAtivo(User usuario) {
-//        return investimentoRepository.findFirstByUsuarioAndStatusOrderByDataInicioDesc(usuario, StatusInvestimento.A)
-//                .orElseGet(() -> {
-//                    Investimento novoInvestimento = new Investimento();
-//                    novoInvestimento.setUsuario(usuario);
-//                    novoInvestimento.setValorInvestido(usuario.getSaldoInvestido());
-//                    novoInvestimento.setStatus(StatusInvestimento.A);
-//                    novoInvestimento.setDataInicio(LocalDateTime.now());
-//                    return investimentoRepository.save(novoInvestimento);
-//                });
-//    }
 
     private BigDecimal ajustarPercentualRendimento(
             BigDecimal percentualBase,

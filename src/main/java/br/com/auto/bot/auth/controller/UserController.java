@@ -7,6 +7,7 @@ import br.com.auto.bot.auth.generic.GenericController;
 import br.com.auto.bot.auth.dto.UserDTO;
 import br.com.auto.bot.auth.model.User;
 import br.com.auto.bot.auth.service.UserService;
+import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
@@ -42,7 +43,7 @@ public class UserController extends GenericController<User, UserDTO, Long> {
             @ApiResponse(responseCode = "200", description = "Lista de usuários retornada com sucesso."),
             @ApiResponse(responseCode = "404", description = "Usuários não encontrados.")
     })
-    @GetMapping
+    @GetMapping("/listar")
     @Override
     public ResponseEntity<Page<UserDTO>> getAll(
             @RequestParam(defaultValue = "0") int pageNumber,
@@ -85,10 +86,9 @@ public class UserController extends GenericController<User, UserDTO, Long> {
             @ApiResponse(responseCode = "200", description = "Usuário encontrado."),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
     })
-    @GetMapping("/{id}")
-    @Override
-    public ResponseEntity<UserDTO> getById(@PathVariable Long id, HttpServletRequest httpServletRequest) throws RegistroNaoEncontradoException {
-        User user = this.serviceBean.findById(id, httpServletRequest.getHeader("sistema"));
+    @GetMapping
+    public ResponseEntity<UserDTO> getById(HttpServletRequest httpServletRequest) throws RegistroNaoEncontradoException {
+        User user = this.serviceBean.findById(ObterDadosUsuarioLogado.getUsuarioLogadoId(), httpServletRequest.getHeader("sistema"));
         user.setPassword(null); // Não retornar a senha
         return ResponseEntity.ok(this.toTO(user));
     }
@@ -98,11 +98,10 @@ public class UserController extends GenericController<User, UserDTO, Long> {
             @ApiResponse(responseCode = "200", description = "Usuário atualizado com sucesso."),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
     })
-    @PutMapping("/{id}")
-    @Override
-    public ResponseEntity  update(@PathVariable Long id, @Valid @RequestBody UserDTO to, HttpServletRequest httpServletRequest) throws RegistroNaoEncontradoException {
+    @PutMapping("")
+    public ResponseEntity  update(@Valid @RequestBody UserDTO to, HttpServletRequest httpServletRequest) throws RegistroNaoEncontradoException {
         to.setSistema(httpServletRequest.getHeader("sistema"));
-        to.setId(id);
+        to.setId(ObterDadosUsuarioLogado.getUsuarioLogadoId());
         User savedEntity = serviceBean.update(to);
         return ResponseEntity.ok(new MessageDTO("Atualizado com sucesso."));
     }

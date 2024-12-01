@@ -1,9 +1,8 @@
 package br.com.auto.bot.auth.controller;
 
-import br.com.auto.bot.auth.exceptions.BussinessException;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.error.ErrorHandleDTO;
 import br.com.auto.bot.auth.model.error.MessageDTO;
-import com.google.gson.Gson;
 import io.jsonwebtoken.ExpiredJwtException;
 import jakarta.validation.UnexpectedTypeException;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,9 +51,9 @@ public class RestAdviceException {
     }
 
 
-    @ExceptionHandler(BussinessException.class)
+    @ExceptionHandler(BusinessException.class)
     @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public MessageDTO handleBusinessException(BussinessException e) {
+    public MessageDTO handleBusinessException(BusinessException e) {
         return new MessageDTO(e.getMessage().toString());
     }
 

@@ -54,7 +54,8 @@ public class ContactService extends GenericService<Contact, Long> {
             this.repository.save(contato);
         } else {
             ContactMapper.mapper(contato, e);
-            contato.setUser(user);
+            //contato.setUser(user);
+            contato.setUserId(user.getId());
             this.repository.save(contato);
         }
         contatosSalvo.add(contato);

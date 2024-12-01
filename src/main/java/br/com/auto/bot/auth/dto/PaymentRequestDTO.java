@@ -1,5 +1,7 @@
 package br.com.auto.bot.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 import java.io.Serializable;
@@ -13,7 +15,10 @@ public class PaymentRequestDTO implements Serializable {
     private BigDecimal amount;
     private String paymentMethod;
     private List<Item> items = new ArrayList<>();
+//    @JsonProperty("split_to")
     private String splitTo;
+//    @JsonProperty("percent_split")
     private Integer percentSplit;
+    @JsonProperty("postback_url")
     private String postbackUrl;
 }

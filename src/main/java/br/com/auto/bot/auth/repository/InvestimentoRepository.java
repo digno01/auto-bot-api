@@ -36,6 +36,13 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
     List<Investimento> findAllInvestimentosAtivosComSaldoByUsuarioId(@Param("usuarioId") Long usuarioId);
 
 
+    @Query("SELECT i FROM Investimento i " +
+            "WHERE i.id = :id " +
+            "AND i.status = 'A' " +
+            "AND i.usuario.id = :usuarioId ")
+    Investimento findInvestimentoAtivoByUsuarioId(@Param("id") Long id, @Param("usuarioId") Long usuarioId);
+
+
     // No InvestimentoRepository:
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.usuario = :usuario " +

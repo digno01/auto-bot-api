@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.converter;
 
 import br.com.auto.bot.auth.enums.TipoResultado;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
 
@@ -27,6 +28,6 @@ public class TipoResultadoConverter implements AttributeConverter<TipoResultado,
             }
         }
 
-        throw new IllegalArgumentException("Código de tipo de resultado inválido: " + codigo);
+        throw new BusinessException("Código de tipo de resultado inválido: " + codigo);
     }
 }

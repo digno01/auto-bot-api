@@ -2,7 +2,7 @@ package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.*;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
-import br.com.auto.bot.auth.exceptions.BussinessException;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.RoboInvestidor;
 import br.com.auto.bot.auth.model.User;
@@ -15,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -45,12 +44,11 @@ public class InvestimentoService {
     public InvestimentoResponseDTO processarInvestimento(InvestimentoRequestDTO request) {
         try {
             User usuario = userRepository.findById(request.getUsuarioId())
-                    .orElseThrow(() -> new BussinessException("Usuário não encontrado"));
+                    .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
             RoboInvestidor robo = roboRepository.findById(request.getRoboId())
-                    .orElseThrow(() -> new BussinessException("Robô não encontrado"));
+                    .orElseThrow(() -> new BusinessException("Robô não encontrado"));
 
-            validarValorMaximoMinimoInvestimento(robo, request.getValorInvestimento());
             return realizarNovoInvestimento(usuario, robo, request);
             //if ("NOVO".equals(request.getTipoOperacao())) {
             /*} else if ("TROCA".equals(request.getTipoOperacao())) {
@@ -61,17 +59,17 @@ public class InvestimentoService {
 
         } catch (Exception e) {
             log.error("Erro ao processar investimento: {}", e.getMessage());
-            throw new BussinessException(e.getMessage());
+            throw new BusinessException(e.getMessage());
         }
     }
 
     private void validarValorMaximoMinimoInvestimento(RoboInvestidor robo, BigDecimal valorInvestimento) {
         // Validação de valor mínimo e máximo
         if (valorInvestimento.compareTo(robo.getValorInvestimentoMin()) < 0) {
-            throw new BussinessException("Valor abaixo do mínimo permitido para este robô");
+            throw new BusinessException("Valor abaixo do mínimo permitido para este robô");
         }
         if (valorInvestimento.compareTo(robo.getValorInvestimentoMax()) > 0) {
-            throw new BussinessException("Valor acima do máximo permitido para este robô");
+            throw new BusinessException("Valor acima do máximo permitido para este robô");
         }
     }
 
@@ -89,17 +87,20 @@ public class InvestimentoService {
 
             BigDecimal valorAcumulado = investimentoAtual.getSaldoAtual().add(request.getValorInvestimento());
             novoInvestimento.setValorInicial(valorAcumulado);
-            novoInvestimento.setSaldoAtual(valorAcumulado);
+            //novoInvestimento.setSaldoAtual();
             novoInvestimento.setDataLiberacao(LocalDateTime.now().plusDays(robo.getDiasPeriodo()));
             novoInvestimento.setStatus(StatusInvestimento.P);
+            novoInvestimento.setUsuario(usuario);
             novoInvestimento.setIdTransacaoPagamentoGateway(request.getIdTransacaoPagamentoGateway());
             novoInvestimento.setUrlQrcode(request.getUrlQrcode());
+            validarValorMaximoMinimoInvestimento(robo, valorAcumulado);
             investimentoRepository.save(novoInvestimento);
 
             investimentoAtual.setStatus(StatusInvestimento.R);
             investimentoRepository.save(investimentoAtual);
             return InvestimentoResponseDTO.fromEntity(investimentoAtual);
         } else {
+            validarValorMaximoMinimoInvestimento(robo, request.getValorInvestimento());
             Investimento novoInvestimento = new Investimento();
             novoInvestimento.setUsuario(usuario);
             novoInvestimento.setRoboInvestidor(robo);
@@ -148,7 +149,7 @@ public class InvestimentoService {
 
         } catch (Exception e) {
             log.error("Erro ao gerar resumo de investimentos: {}", e.getMessage());
-            throw new RuntimeException("Erro ao gerar resumo de investimentos", e);
+            throw new BusinessException("Erro ao gerar resumo de investimentos", e);
         }
     }
 
@@ -198,10 +199,10 @@ public class InvestimentoService {
 
     public void permiteUsuarioInvestir(QrCodeRequestDTO qrCodeRequestDTO) {
         User usuario = userRepository.findById(ObterDadosUsuarioLogado.getUsuarioLogadoId())
-                .orElseThrow(() -> new BussinessException("Usuário não encontrado"));
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
         RoboInvestidor robo = roboRepository.findById(qrCodeRequestDTO.getIdRobo())
-                .orElseThrow(() -> new BussinessException("Robô não encontrado"));
+                .orElseThrow(() -> new BusinessException("Robô não encontrado"));
         Optional<Investimento> optInvestimento =  investimentoRepository.findByUsuarioAndRoboAndStatusNotFinalizedOrCanceled(usuario, robo);
         if(optInvestimento.isEmpty()){
             return;
@@ -211,9 +212,30 @@ public class InvestimentoService {
             BigDecimal valorAcumulado = investimento.getSaldoAtual().add(qrCodeRequestDTO.getAmount());
             validarValorMaximoMinimoInvestimento(robo, valorAcumulado);
         }else if(investimento.getStatus().equals(StatusInvestimento.P) || investimento.getStatus().equals(StatusInvestimento.R)){
-            throw new BussinessException(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getNome() + " você já tem um investimento para o robô aguardando pagamento.");
+            throw new BusinessException(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getNome() + " você já tem um investimento para o robô aguardando pagamento.");
         }
 
 
     }
+
+    public BigDecimal recuperaSaldoDisponivelSaqueInvestimento(Long idInvestimento) {
+        Investimento investimento =  investimentoRepository.findInvestimentoAtivoByUsuarioId(idInvestimento, ObterDadosUsuarioLogado.getUsuarioLogadoId());
+        if(investimento != null){
+            validarInvestimentoHabilitadoSaque(investimento);
+            return investimento.getSaldoAtual();
+        }
+        return BigDecimal.ZERO;
+    }
+
+    private void validarInvestimentoHabilitadoSaque(Investimento investimento) {
+        if (investimento.getStatus() != StatusInvestimento.A) {
+            throw new BusinessException("O seu investimento não está disponível para saque.");
+        }
+
+        // Verifica se a data de liberação é anterior à data atual
+        if (investimento.getDataLiberacao() == null || investimento.getDataLiberacao().isAfter(LocalDateTime.now())) {
+            throw new BusinessException("O seu investimento ainda não chegou no período de saque.");
+        }
+    }
+
 }

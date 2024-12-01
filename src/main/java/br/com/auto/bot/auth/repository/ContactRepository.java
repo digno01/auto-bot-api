@@ -13,6 +13,6 @@ import java.util.Optional;
 @Repository
 public interface ContactRepository extends GenericEntityDeletedRepository<Contact, Long> {
     Optional<Contact> findByIdAndUserId(Long id, Long idUser);
-    @Query("SELECT c FROM Contact c WHERE c.user.id = :userId AND c.isDeleted = false")
+    @Query("SELECT c FROM Contact c WHERE c.userId = :userId AND c.isDeleted = false")
     List<Contact> findActiveContactsByUserId(@Param("userId") Long userId);
 }

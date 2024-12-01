@@ -4,7 +4,7 @@ import br.com.auto.bot.auth.dto.DepositoRequestDTO;
 import br.com.auto.bot.auth.dto.DepositoResponseDTO;
 import br.com.auto.bot.auth.enums.StatusDeposito;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
-import br.com.auto.bot.auth.exceptions.BussinessException;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.Deposito;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.RoboInvestidor;
@@ -42,10 +42,10 @@ public class DepositoInvestimentoService {
     public DepositoResponseDTO processarDepositoEInvestimento(DepositoRequestDTO request, Long usuarioId) {
         try {
             User usuario = userRepository.findById(usuarioId)
-                    .orElseThrow(() -> new BussinessException("Usuário não encontrado"));
+                    .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
 
             RoboInvestidor novoRobo = roboRepository.findById(request.getRoboId())
-                    .orElseThrow(() -> new BussinessException("Robô não encontrado"));
+                    .orElseThrow(() -> new BusinessException("Robô não encontrado"));
 
             Optional<Investimento> investimentoAtivoOpt = investimentoRepository
                     .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, novoRobo, StatusInvestimento.A);
@@ -67,7 +67,7 @@ public class DepositoInvestimentoService {
 
         } catch (Exception e) {
             log.error("Erro ao processar depósito e investimento: {}", e.getMessage());
-            throw new BussinessException(e.getMessage());
+            throw new BusinessException(e.getMessage());
         }
     }
 
@@ -79,7 +79,7 @@ public class DepositoInvestimentoService {
 
         // Validação básica de valor mínimo
         if (valorDeposito.compareTo(novoRobo.getValorInvestimentoMin()) < 0) {
-            throw new BussinessException(String.format(
+            throw new BusinessException(String.format(
                     "Valor do depósito (R$ %s) é inferior ao mínimo permitido para este robô (R$ %s)",
                     valorDeposito,
                     novoRobo.getValorInvestimentoMin()
@@ -100,7 +100,7 @@ public class DepositoInvestimentoService {
                         .add(valorDeposito);
 
                 if (totalAposDeposito.compareTo(novoRobo.getValorInvestimentoMax()) > 0) {
-                    throw new BussinessException(String.format(
+                    throw new BusinessException(String.format(
                             "Valor total após depósito (R$ %s) ultrapassaria o limite máximo do robô (R$ %s)",
                             totalAposDeposito,
                             novoRobo.getValorInvestimentoMax()
@@ -125,7 +125,7 @@ public class DepositoInvestimentoService {
         } else {
             // Primeiro investimento - validar apenas limite máximo do robô
             if (valorDeposito.compareTo(novoRobo.getValorInvestimentoMax()) > 0) {
-                throw new BussinessException(String.format(
+                throw new BusinessException(String.format(
                         "Valor do depósito (R$ %s) é superior ao máximo permitido para este robô (R$ %s)",
                         valorDeposito,
                         novoRobo.getValorInvestimentoMax()

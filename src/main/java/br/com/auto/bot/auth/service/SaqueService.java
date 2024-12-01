@@ -2,13 +2,17 @@ package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.SaqueResponseDTO;
 import br.com.auto.bot.auth.enums.StatusSaque;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.Saque;
 import br.com.auto.bot.auth.repository.InvestimentoRepository;
 import br.com.auto.bot.auth.repository.SaqueRepository;
 import br.com.auto.bot.auth.dto.SaqueRequestDTO;
+import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -22,18 +26,23 @@ public class SaqueService {
     @Autowired
     private SaqueRepository saqueRepository;
 
-    public Saque solicitarSaque(SaqueRequestDTO request, Long usuarioId) {
-        Investimento investimento = investimentoRepository.findById(request.getInvestimentoId())
-                .orElseThrow(() -> new RuntimeException("Investimento não encontrado"));
+    public Saque perepararSaque(SaqueRequestDTO request, Long usuarioId) {
 
-        // Verificando se o usuário é o proprietário do investimento
-        if (!investimento.getUsuario().getId().equals(usuarioId)) {
-            throw new RuntimeException("Usuário não autorizado a realizar o saque deste investimento.");
+        Investimento investimento =  investimentoRepository.findInvestimentoAtivoByUsuarioId(request.getInvestimentoId(), ObterDadosUsuarioLogado.getUsuarioLogadoId());
+        if(investimento == null){
+            throw new BusinessException("Investimento não encontrado");
         }
+//        Investimento investimento = investimentoRepository.findById(request.getInvestimentoId())
+//                .orElseThrow(() -> new RuntimeException("Investimento não encontrado"));
+//
+//        // Verificando se o usuário é o proprietário do investimento
+//        if (!investimento.getUsuario().getId().equals(usuarioId)) {
+//            throw new RuntimeException("Usuário não autorizado a realizar o saque deste investimento.");
+//        }
 
         // Verificando se o saldo disponível é suficiente
         if (request.getValorSaque().compareTo(investimento.getSaldoAtual()) > 0) {
-            throw new RuntimeException("Saldo insuficiente para realizar o saque.");
+            throw new BusinessException("Saldo insuficiente para realizar o saque.");
         }
 
         // Criando a solicitação de saque
@@ -42,9 +51,14 @@ public class SaqueService {
         saque.setInvestimento(investimento);
         saque.setValorSaque(request.getValorSaque());
         saque.setStatus(StatusSaque.P); // Status Pendente
-        saqueRepository.save(saque);
+       // saqueRepository.save(saque);
 
         return saque;
+    }
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public Saque save(Saque saque) {
+        return saqueRepository.save(saque);
     }
 
     public List<SaqueResponseDTO> listarSolicitacoesSaque(Long usuarioId) {

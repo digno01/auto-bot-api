@@ -24,10 +24,13 @@ public class Contact implements IDeletedTable, Serializable {
     @Column(name = "PK_CONTATO", updatable = false, nullable = false)
     private Long id;
 
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name="PK_USUARIO")
-    private User user;
+//    @JsonIgnore
+//    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+//    @JoinColumn(name="PK_USUARIO")
+//    private User user;
+
+    @Column(name = "PK_USUARIO", nullable = false)
+    private Long userId;
 
 
     @Column(name = "NU_DDD")

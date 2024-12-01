@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.CriptoData;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -82,7 +83,7 @@ public class CriptoService {
 
         } catch (Exception e) {
             log.error("Erro ao buscar dados de criptomoedas: {}", e.getMessage());
-            throw new RuntimeException("Erro ao buscar dados de criptomoedas", e);
+            throw new BusinessException("Erro ao buscar dados de criptomoedas", e);
         }
     }
 }

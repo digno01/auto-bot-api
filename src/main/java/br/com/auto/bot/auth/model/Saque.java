@@ -48,6 +48,12 @@ public class Saque implements Serializable {
     @Column(name = "DS_DADOS_BANCARIOS")
     private String dadosBancarios;
 
+    @Column(name = "ID_SAQUE_GATEWAY")
+    private Long idSaqueGateway;
+
+    @Column(name = "end_to_end_id")
+    private String endToEndId;
+
     @PrePersist
     protected void onCreate() {
         dataSolicitacao = LocalDateTime.now();

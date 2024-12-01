@@ -3,6 +3,7 @@ package br.com.auto.bot.auth.model;
 import br.com.auto.bot.auth.generic.interfaces.IActiveTable;
 import br.com.auto.bot.auth.generic.interfaces.IDeletedTable;
 import br.com.auto.bot.auth.model.permissoes.PerfilAcesso;
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -28,11 +29,11 @@ import java.util.stream.Collectors;
 @ToString
 public class User implements IDeletedTable, IActiveTable, Serializable, UserDetails {
 
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "PK_USUARIO", updatable = false, nullable = false)
     private Long id;
-
     @Column(name = "NU_CPF")
     private String cpf;
 
@@ -73,7 +74,7 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dtUltimaTentativaRecupSenha;
 
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
+    @OneToMany(mappedBy = "userId", fetch = FetchType.LAZY)
     private List<Contact> contato =  new ArrayList<>();
 
     @ManyToMany
@@ -89,14 +90,15 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
 //    @Column(name = "vl_saldo_rendimentos")
 //    private BigDecimal saldoRendimentos = BigDecimal.ZERO;
 
-    @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
-    private List<Investimento> investimentos = new ArrayList<>();
+//    @JsonBackReference
+//    @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+//    private List<Investimento> investimentos;
 
-    @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
-    private List<Deposito> depositos = new ArrayList<>();
+    @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Deposito> depositos;
 
-    @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY)
-    private List<Saque> saques = new ArrayList<>();
+    @OneToMany(mappedBy = "usuario", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<Saque> saques;
 
     @Column(name = "DS_CODIGO_INDICACAO", length = 8, unique = true)
     private String codigoIndicacao;

@@ -456,3 +456,6 @@ ALTER TABLE tb_investimento ADD id_transaction_gateway numeric(15) NOT NULL DEFA
 ALTER TABLE public.tb_investimento ADD url_qr_code varchar(200) NULL;
 CREATE INDEX idx_transaction_gateway ON tb_investimento(id_transaction_gateway);
 ALTER TABLE public.tb_usuario ADD avatar varchar(50) NULL;
+
+ALTER TABLE public.tb_saque ADD id_saque_gateway int8 NOT NULL;
+ALTER TABLE public.tb_saque ADD end_to_end_id varchar(50) NOT NULL;

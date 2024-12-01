@@ -26,8 +26,8 @@ public interface UserRepository  extends GenericEntityDeletedRepository<User, Lo
     @Query("SELECT u FROM User u WHERE u.isDeleted = false AND SIZE(u.perfilAcesso) > 0")
     Page<User> findAllByIsDeletedFalseAndHasPerfilAcesso(Pageable pageable);
 
-    @Query("SELECT DISTINCT u FROM User u " +
-            "INNER JOIN u.investimentos i " +
+    @Query("SELECT DISTINCT u FROM Investimento i " +
+            "INNER JOIN i.usuario u " +
             "WHERE u.isActive = true " +
             "AND i.status = 'A' " +
             "AND i.saldoAtual > :saldo")
