@@ -460,3 +460,13 @@ ALTER TABLE public.tb_usuario ADD avatar varchar(50) NULL;
 ALTER TABLE public.tb_saque ADD id_saque_gateway int8 NOT NULL;
 ALTER TABLE public.tb_saque ADD end_to_end_id varchar(50) NOT NULL;
 ALTER TABLE public.tb_investimento ALTER COLUMN st_investimento TYPE bpchar(2) USING st_investimento::bpchar;
+
+
+-- Índice para dt_investimento
+CREATE INDEX idx_investimento_dt_investimento ON public.tb_investimento (dt_investimento);
+
+-- Índice para dt_liberacao
+CREATE INDEX idx_investimento_dt_liberacao ON public.tb_investimento (dt_liberacao);
+
+-- Índice composto para ambas as datas
+CREATE INDEX idx_investimento_datas ON public.tb_investimento (dt_investimento, dt_liberacao);

@@ -31,7 +31,7 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
             BigDecimal saldoAtual);
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.usuario.id = :usuarioId " +
-            "AND i.status IN ('A', 'PA') " +
+            "AND i.status IN ('A', 'PP') " +
             "AND i.dataInvestimento <= :dataLimite " +
             "AND i.dataLiberacao > :dataAtual " +
             "AND i.saldoAtual >= i.roboInvestidor.valorInvestimentoMin")
@@ -73,6 +73,8 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
     Optional<Investimento> findByUsuarioAndRoboAndStatusNotFinalizedOrCanceled(
             @Param("usuario") User usuario,
             @Param("robo") RoboInvestidor robo);
+
+    List<Investimento> findByUsuarioIdAndStatusIn(Long usuarioId, List<StatusInvestimento> status);
     List<Investimento> findByUsuarioIdAndStatus(Long usuarioId, StatusInvestimento status);
 
     // Busca o investimento mais recente por usuário e status
@@ -178,6 +180,7 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
 
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.dataLiberacao <= :dataAtual " +
+            "AND i.status IN ('A', 'PP') " +
             "AND (i.isLiberadoSaque = false OR i.isLiberadoSaque IS NULL)")
     List<Investimento> findByDataLiberacaoLessThanEqualAndIsLiberadoSaqueFalse(
             @Param("dataAtual") LocalDateTime dataAtual

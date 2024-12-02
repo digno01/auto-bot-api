@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -129,7 +130,10 @@ public class InvestimentoService {
 
     @Transactional(readOnly = true)
     public List<InvestimentoResponseDTO> buscarInvestimentosAtivos(Long usuarioId) {
-        return investimentoRepository.findByUsuarioIdAndStatus(usuarioId, StatusInvestimento.A)
+        List<StatusInvestimento> statusList = Arrays.asList(StatusInvestimento.A, StatusInvestimento.PP);
+
+        // Chama o método do repositório com a lista de status
+        return investimentoRepository.findByUsuarioIdAndStatusIn(usuarioId, statusList)
                 .stream()
                 .map(InvestimentoResponseDTO::fromEntity)
                 .collect(Collectors.toList());
@@ -262,7 +266,7 @@ public class InvestimentoService {
             BigDecimal valorPagamento = new BigDecimal(pagamento.getAmount());
 
             if (investimento.getValorInicial().compareTo(valorPagamento) > 0) {
-                investimento.setStatus(StatusInvestimento.PA);
+                investimento.setStatus(StatusInvestimento.PP);
             }else{
                 investimento.setStatus(StatusInvestimento.A);
             }

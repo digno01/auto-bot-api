@@ -8,6 +8,7 @@ import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
 import br.com.auto.bot.auth.service.CriptoService;
+import br.com.auto.bot.auth.util.Util;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -57,9 +58,17 @@ public class JobRendimentoDiarioService {
 
     @Transactional
     //@Scheduled(cron = "0 */30 * * * *")
-    @Scheduled(cron = "0 */1 * * * *")
+    @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 3:00
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
+
+        LocalDateTime dataAtual = LocalDateTime.now();
+
+        // Verifica se é dia útil
+        if (!Util.isDiaUtil(dataAtual.toLocalDate())) {
+            log.info("Processamento ignorado: data atual não é dia útil");
+            return;
+        }
 
         try {
             criptosDiarios = criptoService.buscarDadosCripto24h();

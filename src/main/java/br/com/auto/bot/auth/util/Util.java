@@ -17,9 +17,9 @@ import java.security.GeneralSecurityException;
 import java.security.spec.AlgorithmParameterSpec;
 import java.security.spec.KeySpec;
 import java.text.ParseException;
-import java.util.Base64;
-import java.util.Locale;
-import java.util.Random;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.util.*;
 
 public final class Util {
 
@@ -200,4 +200,34 @@ public final class Util {
         }
         return valid;
     }
+
+
+    // Injetar um serviço de feriados ou criar uma lista estática
+    public static final Set<LocalDate> FERIADOS_NACIONAIS = new HashSet<>(Arrays.asList(
+            // 2024
+            LocalDate.of(2024, 1, 1),  // Ano Novo
+            LocalDate.of(2024, 2, 12), // Carnaval
+            LocalDate.of(2024, 2, 13), // Carnaval
+            LocalDate.of(2024, 3, 29), // Sexta-feira Santa
+            LocalDate.of(2024, 4, 21), // Tiradentes
+            LocalDate.of(2024, 5, 1),  // Dia do Trabalho
+            LocalDate.of(2024, 5, 30), // Corpus Christi
+            LocalDate.of(2024, 9, 7),  // Independência
+            LocalDate.of(2024, 10, 12),// Nossa Senhora Aparecida
+            LocalDate.of(2024, 11, 2), // Finados
+            LocalDate.of(2024, 11, 15),// Proclamação da República
+            LocalDate.of(2024, 12, 25) // Natal
+    ));
+
+    public static boolean isDiaUtil(LocalDate data) {
+        // Verifica se não é fim de semana
+        DayOfWeek diaDaSemana = data.getDayOfWeek();
+        if (diaDaSemana == DayOfWeek.SATURDAY || diaDaSemana == DayOfWeek.SUNDAY) {
+            return false;
+        }
+
+        // Verifica se não é feriado
+        return !FERIADOS_NACIONAIS.contains(data);
+    }
+
 }

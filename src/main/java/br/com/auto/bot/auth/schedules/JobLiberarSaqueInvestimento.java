@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.schedules;
 
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.repository.*;
+import br.com.auto.bot.auth.util.Util;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,10 +23,19 @@ public class JobLiberarSaqueInvestimento {
 
 
     @Transactional
-    @Scheduled(cron = "0 0 3 * * *") // Executa todos os dias às 3:00 da manhã
+    //@Scheduled(cron = "0 */1 * * * *")
+   @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 3:00
     public void processarLiberacaoSaque() {
+        log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
+
+
         try {
             LocalDateTime dataAtual = LocalDateTime.now();
+            // Verifica se é dia útil
+            if (!Util.isDiaUtil(dataAtual.toLocalDate())) {
+                log.info("Processamento ignorado: data atual não é dia útil");
+                return;
+            }
 
             // Recupera os investimentos que atendem aos critérios
             List<Investimento> investimentos = investimentoRepository

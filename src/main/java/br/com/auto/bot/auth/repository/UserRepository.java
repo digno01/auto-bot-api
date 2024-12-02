@@ -29,7 +29,7 @@ public interface UserRepository  extends GenericEntityDeletedRepository<User, Lo
     @Query("SELECT DISTINCT u FROM Investimento i " +
             "INNER JOIN i.usuario u " +
             "WHERE u.isActive = true " +
-            "AND i.status IN ('A', 'PA') " +
+            "AND i.status IN ('A', 'PP') " +
             "AND i.saldoAtual > :saldo")
     List<User> findUsersWithActiveInvestmentsAndPositiveBalance(@Param("saldo") BigDecimal saldo);
 
