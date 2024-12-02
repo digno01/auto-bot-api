@@ -64,22 +64,22 @@ public class PaymentGatewayService {
 
     @Transactional(propagation = Propagation.REQUIRED)
     public QrCodeResponseDTO generatePaymentQRCode(QrCodeRequestDTO qrCodeRequestDTO) throws RegistroNaoEncontradoException {
-        PaymentResponseDTO responseBody = null;
-        try {
-            responseBody = objectMapper.readValue("PaymentResponseDTO responseBody = objectMapper.readValue(jsonString, PaymentResponseDTO.class);", PaymentResponseDTO.class);
+        //mock qrcode
+       /* try {
+        PaymentResponseDTO  responseBody = objectMapper.readValue("{ \"status\": \"success\",\"transaction\": {\"id\": \"35651\",\"pix_image_base64\": \"https://generator.qrcodefacil.com/qrcodes/static-5effce47e5dab0c07afd0a1570453e47.svg\",\"pix_payload\":\"00020126850014br.gov.bcb.pix2563pix.voluti.com.br/qr/v3/at/2c9628ca-8cc0-4f89-aacc-8692e6a200d75204000053039865802BR5909DET_PAY_62070503***630413B9\"  }}", PaymentResponseDTO.class);
 
         if (responseBody != null && "success".equals(responseBody.getStatus())) {
             String transactionId = responseBody.getTransaction().getId();
-            investValorQrCode(qrCodeRequestDTO, new BigDecimal(transactionId), responseBody.getTransaction().getPix_image_base64());
             QrCodeResponseDTO retorno = new QrCodeResponseDTO();
             retorno.setUrlQrCode(responseBody.getTransaction().getPix_image_base64());
             retorno.setIdTransacao(transactionId);
+            retorno.setPixPayload("00020126850014br.gov.bcb.pix2563pix.voluti.com.br/qr/v3/at/2c9628ca-8cc0-4f89-aacc-8692e6a200d75204000053039865802BR5909LOYDS_PAY_62070503***630413B9");
             return  retorno;
         }
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
-        }
-       /* investimentoService.permiteUsuarioInvestir(qrCodeRequestDTO);
+        }*/
+        investimentoService.permiteUsuarioInvestir(qrCodeRequestDTO);
         HttpHeaders headers = createHeaders();
 
         PaymentRequestDTO request = new PaymentRequestDTO();
@@ -130,13 +130,14 @@ public class PaymentGatewayService {
                     QrCodeResponseDTO retorno = new QrCodeResponseDTO();
                     retorno.setUrlQrCode(responseBody.getTransaction().getPix_image_base64());
                     retorno.setIdTransacao(transactionId);
+                    retorno.setPixPayload(responseBody.getTransaction().getPix_payload());
                     return  retorno;
                 }
             }
 
         } catch (JsonProcessingException e) {
             throw new RuntimeException("Erro no processamento do QRCode", e);
-        }*/
+        }
         return null;
     }
 
@@ -233,5 +234,9 @@ public class PaymentGatewayService {
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
         return headers;
+    }
+
+    public void processarPagamento(PaymentCallBackDTO pagamento) {
+        investimentoService.processarPagamentoInvestimento(pagamento);
     }
 }

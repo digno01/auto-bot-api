@@ -8,4 +8,5 @@ import java.math.BigDecimal;
 public class QrCodeResponseDTO {
     private String idTransacao;
     private String urlQrCode;
+    private String pixPayload;
 }

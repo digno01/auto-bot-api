@@ -459,3 +459,4 @@ ALTER TABLE public.tb_usuario ADD avatar varchar(50) NULL;
 
 ALTER TABLE public.tb_saque ADD id_saque_gateway int8 NOT NULL;
 ALTER TABLE public.tb_saque ADD end_to_end_id varchar(50) NOT NULL;
+ALTER TABLE public.tb_investimento ALTER COLUMN st_investimento TYPE bpchar(2) USING st_investimento::bpchar;

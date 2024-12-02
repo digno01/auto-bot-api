@@ -238,4 +238,60 @@ public class InvestimentoService {
         }
     }
 
+    public boolean verificarInvestimentoAtivo(Long usuarioId, Long roboId) {
+        return investimentoRepository.existsByUsuarioIdAndRoboInvestidorIdAndStatus(
+                usuarioId,
+                roboId,
+                StatusInvestimento.A // Assumindo que 'A' é o status para investimentos ativos
+        );
+    }
+    public boolean verificarPagamentoPixInvestimento(BigDecimal idTransacao, Long usuarioId) {
+        return investimentoRepository.existsByIdTransacaoPagamentoGatewayAndUsuarioIdAndStatus(
+                idTransacao,
+                usuarioId,
+                StatusInvestimento.A
+        );
+    }
+
+    @Transactional
+    public void processarPagamentoInvestimento(PaymentCallBackDTO pagamento) {
+        BigDecimal idTransacao = new BigDecimal(pagamento.getId());
+        Optional<Investimento> opt = investimentoRepository.findFirstByIdTransacaoPagamentoGateway(idTransacao);
+        if(opt.isPresent()){
+            Investimento investimento = opt.get();
+            BigDecimal valorPagamento = new BigDecimal(pagamento.getAmount());
+
+            if (investimento.getValorInicial().compareTo(valorPagamento) > 0) {
+                investimento.setStatus(StatusInvestimento.PA);
+            }else{
+                investimento.setStatus(StatusInvestimento.A);
+            }
+            investimento.setValorInicial(valorPagamento);
+            investimento.setSaldoAtual(valorPagamento);
+            investimentoRepository.save(investimento);
+            User user = investimento.getUsuario();
+
+            // Recupera investimentos pendentes e reinvestidos
+            List<Investimento> investimentosAnteriores = investimentoRepository
+                    .findPendingAndReinvestedByUsuarioAndRobo(
+                            user,
+                            investimento.getRoboInvestidor(),
+                            investimento.getId()
+                    );
+
+            // Processa cada investimento de acordo com seu status atual
+            investimentosAnteriores.forEach(inv -> {
+                if (inv.getStatus() == StatusInvestimento.P) {
+                    inv.setStatus(StatusInvestimento.C); // Muda para Cancelado
+                } else if (inv.getStatus() == StatusInvestimento.R) {
+                    inv.setStatus(StatusInvestimento.F); // Muda para Finalizado
+                }
+            });
+
+            // Salva todas as alterações de uma vez
+            if (!investimentosAnteriores.isEmpty()) {
+                investimentoRepository.saveAll(investimentosAnteriores);
+            }
+        }
+    }
 }

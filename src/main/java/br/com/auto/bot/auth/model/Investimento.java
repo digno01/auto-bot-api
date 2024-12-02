@@ -50,7 +50,7 @@ public class Investimento implements Serializable {
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataLiberacao;
 
-    @Column(name = "ST_INVESTIMENTO", length = 1)
+    @Column(name = "ST_INVESTIMENTO", length = 2)
     @Enumerated(EnumType.STRING)
     private StatusInvestimento status;
 

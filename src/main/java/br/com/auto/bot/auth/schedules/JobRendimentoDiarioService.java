@@ -1,4 +1,4 @@
-package br.com.auto.bot.auth.service;
+package br.com.auto.bot.auth.schedules;
 
 import br.com.auto.bot.auth.dto.CriptoData;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
@@ -7,6 +7,7 @@ import br.com.auto.bot.auth.enums.TipoResultado;
 import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
+import br.com.auto.bot.auth.service.CriptoService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
@@ -15,7 +16,6 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDateTime;
@@ -26,7 +26,7 @@ import java.util.Random;
 
 @Service
 @Slf4j
-public class RendimentoDiarioService {
+public class JobRendimentoDiarioService {
 
     @Autowired
     private UserRepository userRepository;
@@ -56,7 +56,8 @@ public class RendimentoDiarioService {
     private List<CriptoData> criptosDiarios;
 
     @Transactional
-    @Scheduled(cron = "0 */30 * * * *")
+    //@Scheduled(cron = "0 */30 * * * *")
+    @Scheduled(cron = "0 */1 * * * *")
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 
@@ -111,7 +112,17 @@ public class RendimentoDiarioService {
     public void processarRendimentoUsuario(User usuario) {
         try {
 
-            List<Investimento> listInvestimentos = investimentoRepository.findAllInvestimentosAtivosComSaldoByUsuarioId(usuario.getId());
+            LocalDateTime dataAtual = LocalDateTime.now();
+            LocalDateTime dataLimite = dataAtual.minusDays(1);
+
+            List<Investimento> listInvestimentos = investimentoRepository
+                    .findAllInvestimentosAtivosComSaldoByUsuarioId(
+                            usuario.getId(),
+                            dataLimite,
+                            dataAtual
+                    );
+
+            //List<Investimento> listInvestimentos = investimentoRepository.findAllInvestimentosAtivosComSaldoByUsuarioId(usuario.getId());
 
             listInvestimentos.forEach(investimento -> {
                 RoboInvestidor robo = investimento.getRoboInvestidor();
@@ -119,11 +130,14 @@ public class RendimentoDiarioService {
                 double percentualDoDia = isLucro ?
                         investimento.getRoboInvestidor().getPercentualRendimentoMin().doubleValue() + (Math.random() * (robo.getPercentualRendimentoMax().subtract(robo.getPercentualRendimentoMin())).doubleValue()) :
                         (Double.valueOf(-0.01));
-                BigDecimal saldoRendimentos = investimento.getSaldoAtual();
+                // se for juros sobre juros
+               // BigDecimal saldoRendimentos = investimento.getSaldoAtual();
+                //se for so em cima do capital
+                BigDecimal saldoRendimentos = investimento.getValorInicial();
                 BigDecimal rendimentoBruto = saldoRendimentos.multiply(BigDecimal.valueOf(percentualDoDia))
                         .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN);
 
-                BigDecimal saldoAcumulado = saldoRendimentos.add(rendimentoBruto);
+                BigDecimal saldoAcumulado = investimento.getSaldoAtual().add(rendimentoBruto);
                 if (saldoAcumulado.compareTo(BigDecimal.ZERO) < 0) {
                     BigDecimal saldoEfetivo = saldoAcumulado;
 
@@ -156,26 +170,9 @@ public class RendimentoDiarioService {
                     cancelarInvestimento(usuario, investimento);
                     return;
                 }
-                distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
+                //distribuirRendimentosIndicadores(niveisIndicadores, rendimentoBruto, investimento);
 
             });
-//            Investimento investimento = buscarOuCriarInvestimentoAtivo(usuario);
-//            RoboInvestidor robo = investimento.getRoboInvestidor();
-//
-//            BigDecimal percentualAjustado = ajustarPercentualRendimento(
-//                    percentualDoDia,
-//                    investimento.getIsUltimoRendimentoLoss(),
-//                    investimento.getValorUltimoRendimento()
-//            );
-
-
-
-
-
-
-          //  investimento.setValorUltimoRendimento(rendimentoBruto);
-
-
 
         } catch (Exception e) {
             log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());

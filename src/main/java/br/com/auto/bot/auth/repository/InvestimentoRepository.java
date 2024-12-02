@@ -31,9 +31,15 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
             BigDecimal saldoAtual);
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.usuario.id = :usuarioId " +
-            "AND i.status = 'A' " +
-            "AND i.saldoAtual > 0")
-    List<Investimento> findAllInvestimentosAtivosComSaldoByUsuarioId(@Param("usuarioId") Long usuarioId);
+            "AND i.status IN ('A', 'PA') " +
+            "AND i.dataInvestimento <= :dataLimite " +
+            "AND i.dataLiberacao > :dataAtual " +
+            "AND i.saldoAtual >= i.roboInvestidor.valorInvestimentoMin")
+    List<Investimento> findAllInvestimentosAtivosComSaldoByUsuarioId(
+            @Param("usuarioId") Long usuarioId,
+            @Param("dataLimite") LocalDateTime dataLimite,
+            @Param("dataAtual") LocalDateTime dataAtual
+    );
 
 
     @Query("SELECT i FROM Investimento i " +
@@ -150,5 +156,30 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
             @Param("usuario") User usuario,
             @Param("statusAtual") String statusAtual,
             @Param("novoStatus") String novoStatus
+    );
+
+    boolean existsByIdTransacaoPagamentoGatewayAndUsuarioIdAndStatus(
+            BigDecimal idTransacaoPagamentoGateway,
+            Long usuarioId,
+            StatusInvestimento status
+    );
+    boolean existsByUsuarioIdAndRoboInvestidorIdAndStatus(Long usuarioId, Long roboId, StatusInvestimento status);
+
+    Optional<Investimento> findFirstByIdTransacaoPagamentoGateway(BigDecimal idTransacao);
+    @Query("SELECT i FROM Investimento i WHERE i.usuario = :usuario " +
+            "AND i.roboInvestidor = :roboInvestidor " +
+            "AND i.status IN ('P', 'R') " +
+            "AND i.id != :investimentoId")
+    List<Investimento> findPendingAndReinvestedByUsuarioAndRobo(
+            @Param("usuario") User usuario,
+            @Param("roboInvestidor") RoboInvestidor roboInvestidor,
+            @Param("investimentoId") Long investimentoId
+    );
+
+    @Query("SELECT i FROM Investimento i " +
+            "WHERE i.dataLiberacao <= :dataAtual " +
+            "AND (i.isLiberadoSaque = false OR i.isLiberadoSaque IS NULL)")
+    List<Investimento> findByDataLiberacaoLessThanEqualAndIsLiberadoSaqueFalse(
+            @Param("dataAtual") LocalDateTime dataAtual
     );
 }

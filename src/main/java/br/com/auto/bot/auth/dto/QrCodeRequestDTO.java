@@ -9,4 +9,5 @@ import java.util.List;
 public class QrCodeRequestDTO {
     private BigDecimal amount;
     private Long idRobo;
+
 }

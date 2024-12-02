@@ -10,13 +10,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.ws.rs.PathParam;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Tag(name = "Investimentos", description = "Endpoints para gerenciar investimentos.")
 @RestController
@@ -73,6 +76,35 @@ public class InvestimentoController {
         Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
         List<InvestimentoSaqueDTO> investimentosParaSaque = investimentoService.listarInvestimentosParaSaque(usuarioId);
         return ResponseEntity.ok(investimentosParaSaque);
+    }
+
+    @GetMapping("/verificar-ativo")
+    public ResponseEntity<Map<String, Object>> verificarInvestimentoAtivo(
+            @RequestParam Long roboId) {
+
+        boolean possuiInvestimentoAtivo = investimentoService.verificarInvestimentoAtivo(ObterDadosUsuarioLogado.getUsuarioLogadoId(), roboId);
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("possuiInvestimentoAtivo", possuiInvestimentoAtivo);
+
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/verificar-pagamento-pix")
+    @Operation(summary = "Verificar transação ativa", description = "Verifica se uma transação específica está ativa para um usuário.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Verificação realizada com sucesso."),
+            @ApiResponse(responseCode = "404", description = "Transação não encontrada.")
+    })
+    public ResponseEntity<Map<String, Object>> verificarTransacaoAtiva(
+            @RequestParam BigDecimal idTransacao) {
+
+        boolean transacaoAtiva = investimentoService.verificarPagamentoPixInvestimento(idTransacao, ObterDadosUsuarioLogado.getUsuarioLogadoId());
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("transacaoAtiva", transacaoAtiva);
+
+        return ResponseEntity.ok(response);
     }
 
 }
