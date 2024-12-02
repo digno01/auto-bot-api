@@ -470,3 +470,7 @@ CREATE INDEX idx_investimento_dt_liberacao ON public.tb_investimento (dt_liberac
 
 -- Índice composto para ambas as datas
 CREATE INDEX idx_investimento_datas ON public.tb_investimento (dt_investimento, dt_liberacao);
+
+ALTER TABLE public.tb_saque DROP COLUMN ds_dados_bancarios;
+ALTER TABLE public.tb_saque ALTER COLUMN id_saque_gateway DROP NOT NULL;
+ALTER TABLE public.tb_saque ALTER COLUMN end_to_end_id DROP NOT NULL;

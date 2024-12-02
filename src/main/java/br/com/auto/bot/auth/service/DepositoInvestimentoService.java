@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
 
 @Service
 @Slf4j
@@ -48,7 +49,7 @@ public class DepositoInvestimentoService {
                     .orElseThrow(() -> new BusinessException("Robô não encontrado"));
 
             Optional<Investimento> investimentoAtivoOpt = investimentoRepository
-                    .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, novoRobo, StatusInvestimento.A);
+                    .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, novoRobo,  Set.of(StatusInvestimento.A, StatusInvestimento.PP));
 
             // Validar limites considerando investimento existente
             validarLimitesInvestimento(investimentoAtivoOpt, novoRobo, request.getValorDeposito(), usuario);

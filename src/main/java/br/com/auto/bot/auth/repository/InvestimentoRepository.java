@@ -13,11 +13,20 @@ import org.springframework.stereotype.Repository;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface InvestimentoRepository extends JpaRepository<Investimento, Long> {
+
+
+    @Query("SELECT i FROM Investimento i " +
+            "WHERE i.usuario.id = :userId " +
+            "AND i.isLiberadoSaque = true " +
+            "AND i.status IN ('A', 'PP') " +
+            "AND i.saldoAtual > 0")
+    List<Investimento> findWithdrawableInvestments(@Param("userId") Long userId);
 
     List<Investimento> findByUsuarioIdAndSaldoAtualGreaterThanAndDataLiberacaoLessThanEqualAndStatus(
             Long usuarioId,
@@ -53,12 +62,12 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.usuario = :usuario " +
             "AND i.roboInvestidor = :robo " +
-            "AND i.status = :status " +
+            "AND i.status IN :status " +
             "AND i.saldoAtual > 0")
     Optional<Investimento> findInvestimentoAtivoComSaldoByUsuarioAndRobo(
             @Param("usuario") User usuario,
             @Param("robo") RoboInvestidor robo,
-            @Param("status") StatusInvestimento status
+            @Param("status") Collection<StatusInvestimento> status
     );
 
 
@@ -160,10 +169,10 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
             @Param("novoStatus") String novoStatus
     );
 
-    boolean existsByIdTransacaoPagamentoGatewayAndUsuarioIdAndStatus(
+    boolean existsByIdTransacaoPagamentoGatewayAndUsuarioIdAndStatusIn(
             BigDecimal idTransacaoPagamentoGateway,
             Long usuarioId,
-            StatusInvestimento status
+            Collection<StatusInvestimento> status
     );
     boolean existsByUsuarioIdAndRoboInvestidorIdAndStatus(Long usuarioId, Long roboId, StatusInvestimento status);
 

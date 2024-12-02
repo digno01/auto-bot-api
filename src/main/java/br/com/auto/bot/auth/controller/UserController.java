@@ -26,7 +26,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("${app.api.url}/usuario")
+@RequestMapping("/api/usuario")
 @Tag(name = "Usuários", description = "Este controlador fornece operações para gerenciar usuários e autenticação.")
 //@CrossOrigin(origins = "${app.cors.allowed-origins}")
 public class UserController extends GenericController<User, UserDTO, Long> {

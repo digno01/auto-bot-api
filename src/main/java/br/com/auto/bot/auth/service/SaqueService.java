@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.SaqueResponseDTO;
+import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.StatusSaque;
 import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.Investimento;
@@ -26,34 +27,33 @@ public class SaqueService {
     @Autowired
     private SaqueRepository saqueRepository;
 
+    @Transactional(propagation = Propagation.REQUIRED)
     public Saque perepararSaque(SaqueRequestDTO request, Long usuarioId) {
 
         Investimento investimento =  investimentoRepository.findInvestimentoAtivoByUsuarioId(request.getInvestimentoId(), ObterDadosUsuarioLogado.getUsuarioLogadoId());
         if(investimento == null){
             throw new BusinessException("Investimento não encontrado");
         }
-//        Investimento investimento = investimentoRepository.findById(request.getInvestimentoId())
-//                .orElseThrow(() -> new RuntimeException("Investimento não encontrado"));
-//
-//        // Verificando se o usuário é o proprietário do investimento
-//        if (!investimento.getUsuario().getId().equals(usuarioId)) {
-//            throw new RuntimeException("Usuário não autorizado a realizar o saque deste investimento.");
-//        }
 
         // Verificando se o saldo disponível é suficiente
         if (request.getValorSaque().compareTo(investimento.getSaldoAtual()) > 0) {
             throw new BusinessException("Saldo insuficiente para realizar o saque.");
         }
+        try{
 
-        // Criando a solicitação de saque
-        Saque saque = new Saque();
-        saque.setUsuario(investimento.getUsuario());
-        saque.setInvestimento(investimento);
-        saque.setValorSaque(request.getValorSaque());
-        saque.setStatus(StatusSaque.P); // Status Pendente
-       // saqueRepository.save(saque);
-
-        return saque;
+            // Criando a solicitação de saque
+            Saque saque = new Saque();
+            saque.setUsuario(investimento.getUsuario());
+            saque.setInvestimento(investimento);
+            saque.setValorSaque(request.getValorSaque());
+            saque.setStatus(StatusSaque.P); // Status Pendente
+            saqueRepository.save(saque);
+            investimento.setStatus(StatusInvestimento.SL);
+            investimentoRepository.save(investimento);
+            return saque;
+        }catch (Exception e ){
+            throw new BusinessException("Erro ao processar saque.");
+        }
     }
 
     @Transactional(propagation = Propagation.REQUIRED)

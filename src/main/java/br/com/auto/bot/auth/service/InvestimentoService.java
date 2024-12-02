@@ -19,6 +19,7 @@ import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -80,7 +81,7 @@ public class InvestimentoService {
             InvestimentoRequestDTO request) {
 
         Optional<Investimento> investimentoExistente = investimentoRepository
-                .findByUsuarioAndStatus(usuario, StatusInvestimento.A);
+                .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, robo,  Set.of(StatusInvestimento.A, StatusInvestimento.PP));
         if (investimentoExistente.isPresent()) {
             validarValorUtrapassaComInvestimentoAtivo(investimentoExistente.get(), request.getValorInvestimento(), robo);
             Investimento investimentoAtual = investimentoExistente.get();
@@ -181,13 +182,9 @@ public class InvestimentoService {
     }
 
 
+    @Transactional
     public List<InvestimentoSaqueDTO> listarInvestimentosParaSaque(Long usuarioId) {
-        List<Investimento> investimentos = investimentoRepository.findByUsuarioIdAndSaldoAtualGreaterThanAndDataLiberacaoLessThanEqualAndStatus(
-                usuarioId,
-                BigDecimal.ZERO,
-                LocalDateTime.now(),
-                StatusInvestimento.A
-        );
+        List<Investimento> investimentos = investimentoRepository.findWithdrawableInvestments(usuarioId);
 
         return investimentos.stream()
                 .map(investimento -> new InvestimentoSaqueDTO(
@@ -215,8 +212,8 @@ public class InvestimentoService {
         if(investimento.getStatus().equals(StatusInvestimento.A)){
             BigDecimal valorAcumulado = investimento.getSaldoAtual().add(qrCodeRequestDTO.getAmount());
             validarValorMaximoMinimoInvestimento(robo, valorAcumulado);
-        }else if(investimento.getStatus().equals(StatusInvestimento.P) || investimento.getStatus().equals(StatusInvestimento.R)){
-            throw new BusinessException(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getNome() + " você já tem um investimento para o robô aguardando pagamento.");
+        }else if(investimento.getStatus().equals(StatusInvestimento.P) ){
+            throw new BusinessException(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getNome() + " você já tem um investimento para o robô aguardando pagamento. Aguarde alguns instantes e tente novamente ");
         }
 
 
@@ -250,10 +247,10 @@ public class InvestimentoService {
         );
     }
     public boolean verificarPagamentoPixInvestimento(BigDecimal idTransacao, Long usuarioId) {
-        return investimentoRepository.existsByIdTransacaoPagamentoGatewayAndUsuarioIdAndStatus(
+        return investimentoRepository.existsByIdTransacaoPagamentoGatewayAndUsuarioIdAndStatusIn(
                 idTransacao,
                 usuarioId,
-                StatusInvestimento.A
+                Arrays.asList(StatusInvestimento.A, StatusInvestimento.PP)
         );
     }
 
@@ -264,7 +261,7 @@ public class InvestimentoService {
         if(opt.isPresent()){
             Investimento investimento = opt.get();
             BigDecimal valorPagamento = new BigDecimal(pagamento.getAmount());
-
+            System.out.println("Valor inicial: " + investimento.getValorInicial() + " Valor gatway " + valorPagamento);
             if (investimento.getValorInicial().compareTo(valorPagamento) > 0) {
                 investimento.setStatus(StatusInvestimento.PP);
             }else{

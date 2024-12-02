@@ -45,8 +45,6 @@ public class Saque implements Serializable {
     @Enumerated(EnumType.STRING)
     private StatusSaque status;
 
-    @Column(name = "DS_DADOS_BANCARIOS")
-    private String dadosBancarios;
 
     @Column(name = "ID_SAQUE_GATEWAY")
     private Long idSaqueGateway;

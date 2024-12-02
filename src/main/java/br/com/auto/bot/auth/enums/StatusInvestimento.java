@@ -5,6 +5,7 @@ public enum StatusInvestimento {
     A("Ativo"),
     P("Pendente Pagamento"),
     PP("Pagamento Parcial"),
+    SL("Saque Solicitado"),
     R("Reinvestido"),
     F("Finalizado"),
     C("Cancelado");
