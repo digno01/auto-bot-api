@@ -3,6 +3,7 @@ package br.com.auto.bot.auth.service;
 import br.com.auto.bot.auth.dto.SaqueResponseDTO;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.StatusSaque;
+import br.com.auto.bot.auth.enums.TipoNotificacao;
 import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.Saque;
@@ -11,6 +12,8 @@ import br.com.auto.bot.auth.repository.SaqueRepository;
 import br.com.auto.bot.auth.dto.SaqueRequestDTO;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -26,6 +29,8 @@ public class SaqueService {
 
     @Autowired
     private SaqueRepository saqueRepository;
+    @Autowired
+    private NotificacaoUsuarioService notificacaoUsuarioService;
 
     @Transactional(propagation = Propagation.REQUIRED)
     public Saque perepararSaque(SaqueRequestDTO request, Long usuarioId) {
@@ -50,6 +55,14 @@ public class SaqueService {
             saqueRepository.save(saque);
             investimento.setStatus(StatusInvestimento.SL);
             investimentoRepository.save(investimento);
+
+            notificacaoUsuarioService.criarNotificacao(
+                    investimento.getUsuario(),
+                    "Saque Solicitado",
+                    "Solicitado saque no valor de  R$ " + saque.getValorSaque() + " para o investimento no " + investimento.getRoboInvestidor().getNome(),
+                    saque.getValorSaque(),
+                    TipoNotificacao.SAQUE_SOLICITADO
+            );
             return saque;
         }catch (Exception e ){
             throw new BusinessException("Erro ao processar saque.");
@@ -73,5 +86,11 @@ public class SaqueService {
                         saque.getDataProcessamento()
                 ))
                 .collect(Collectors.toList());
+    }
+
+
+    public Page<SaqueResponseDTO> findAllPendentes(Pageable pageable) {
+        Page<Saque> saques = saqueRepository.findAllByStatus(StatusSaque.P, pageable);
+        return saques.map(SaqueResponseDTO::fromEntity);
     }
 }

@@ -474,3 +474,29 @@ CREATE INDEX idx_investimento_datas ON public.tb_investimento (dt_investimento, 
 ALTER TABLE public.tb_saque DROP COLUMN ds_dados_bancarios;
 ALTER TABLE public.tb_saque ALTER COLUMN id_saque_gateway DROP NOT NULL;
 ALTER TABLE public.tb_saque ALTER COLUMN end_to_end_id DROP NOT NULL;
+
+
+
+CREATE TABLE TB_NOTIFICACAO_USUARIO (
+                                        PK_NOTIFICACAO SERIAL4 NOT NULL,
+                                        PK_USUARIO INT8 NOT NULL,
+                                        DS_TITULO VARCHAR(100) NOT NULL,
+                                        DS_MENSAGEM VARCHAR(500) NOT NULL,
+                                        VL_REFERENCIA NUMERIC(15, 2) NULL,
+                                        TP_NOTIFICACAO VARCHAR(30) NOT NULL, -- Em vez de enum, usando VARCHAR
+                                        ST_LIDA BOOL NOT NULL DEFAULT FALSE,
+                                        DT_CRIACAO TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        DT_LEITURA TIMESTAMP NULL,
+                                        DT_CREATED_AT TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                                        DT_UPDATED_AT TIMESTAMP NULL,
+
+                                        CONSTRAINT TB_NOTIFICACAO_USUARIO_PKEY PRIMARY KEY (PK_NOTIFICACAO),
+                                        CONSTRAINT TB_NOTIFICACAO_USUARIO_FK FOREIGN KEY (PK_USUARIO)
+                                            REFERENCES PUBLIC.TB_USUARIO(PK_USUARIO)
+);
+
+-- Índices para melhorar a performance
+CREATE INDEX IDX_NOTIFICACAO_USUARIO ON TB_NOTIFICACAO_USUARIO USING BTREE (PK_USUARIO);
+CREATE INDEX IDX_NOTIFICACAO_TIPO ON TB_NOTIFICACAO_USUARIO USING BTREE (TP_NOTIFICACAO);
+CREATE INDEX IDX_NOTIFICACAO_LIDA ON TB_NOTIFICACAO_USUARIO USING BTREE (ST_LIDA);
+CREATE INDEX IDX_NOTIFICACAO_DATA ON TB_NOTIFICACAO_USUARIO USING BTREE (DT_CRIACAO);

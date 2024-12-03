@@ -1,9 +1,11 @@
 package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.*;
+import br.com.auto.bot.auth.enums.TipoNotificacao;
 import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.exceptions.PaymentException;
 import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
+import br.com.auto.bot.auth.model.RoboInvestidor;
 import br.com.auto.bot.auth.model.Saque;
 import br.com.auto.bot.auth.model.User;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
@@ -34,8 +36,10 @@ public class PaymentGatewayService {
     private final Integer percentualDeposito;
     private final String emailContratoGatway;
     private final InvestimentoService investimentoService;
+    private final RoboInvestidorService roboInvestidorService;
     private final SaqueService saqueService;
     private final UserService userService;
+    private final NotificacaoUsuarioService notificacaoUsuarioService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
 
@@ -49,7 +53,9 @@ public class PaymentGatewayService {
             @Value("${payment.api.percentualDeposito}") Integer percentualDeposito,
             UserService userService,
             SaqueService saqueService,
-            InvestimentoService investimentoService) {
+            InvestimentoService investimentoService,
+            RoboInvestidorService roboInvestidorService,
+            NotificacaoUsuarioService notificacaoUsuarioService) {
         this.restTemplate = restTemplate;
         this.baseUrl = baseUrl;
         this.publicToken = publicToken;
@@ -60,6 +66,8 @@ public class PaymentGatewayService {
         this.percentualDeposito = percentualDeposito;
         this.emailContratoGatway = emailContratoGatway;
         this.saqueService = saqueService;
+        this.notificacaoUsuarioService = notificacaoUsuarioService;
+        this.roboInvestidorService = roboInvestidorService;
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -87,6 +95,7 @@ public class PaymentGatewayService {
         Document document =  new Document();
         Item item = new Item();
         Optional<User> optUser = userService.findByIdWithOutContacts(ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId());
+        RoboInvestidor robo = roboInvestidorService.findById(qrCodeRequestDTO.getIdRobo());
         item.setUnitPrice(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")));
         request.getItems().add(item);
         System.out.println(this.callBackPix);
@@ -131,6 +140,14 @@ public class PaymentGatewayService {
                     retorno.setUrlQrCode(responseBody.getTransaction().getPix_image_base64());
                     retorno.setIdTransacao(transactionId);
                     retorno.setPixPayload(responseBody.getTransaction().getPix_payload());
+
+                    notificacaoUsuarioService.criarNotificacao(
+                            user,
+                            "Investimento Solicitado",
+                            "Gerado Qr Code de  R$ " + qrCodeRequestDTO.getAmount() + " para o investimento no " + robo.getNome(),
+                            qrCodeRequestDTO.getAmount(),
+                            TipoNotificacao.INVESTIMENTO_SOLICITADO
+                    );
                     return  retorno;
                 }
             }

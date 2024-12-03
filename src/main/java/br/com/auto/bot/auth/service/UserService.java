@@ -137,18 +137,24 @@ public class UserService extends GenericService<User, Long> {
 
 
     public User save(User entity, UserDTO dto) throws RegistroNaoEncontradoException {
-        entity.setContato(null);
-        entity.setPassword(passwordEncoder.encode(entity.getPassword()));
-        String token = jwtService.generateRecoverToken(entity);
-        entity.setToken(token);
+        try{
+
+            entity.setContato(null);
+            entity.setPassword(passwordEncoder.encode(entity.getPassword()));
+            String token = jwtService.generateRecoverToken(entity);
+            entity.setToken(token);
 
 
-        User user = this.repository.save(entity);
-        contactService.saveOrUpdate(dto.getContato(), user);
+            User user = this.repository.save(entity);
+            contactService.saveOrUpdate(dto.getContato(), user);
 
-        // Modificado para usar código de indicação
-        if (StringUtils.isNotBlank(dto.getCodigoIndicacaoIndicador())) {
-            criarIndicacao(user, dto.getCodigoIndicacaoIndicador());
+            // Modificado para usar código de indicação
+            if (StringUtils.isNotBlank(dto.getCodigoIndicacaoIndicador())) {
+                criarIndicacao(user, dto.getCodigoIndicacaoIndicador());
+            }
+            return user;
+        }catch (Exception e){
+            throw new BusinessException(e.getMessage());
         }
 
 //        if (dto.getIsExterno()) {
@@ -156,7 +162,7 @@ public class UserService extends GenericService<User, Long> {
 //        } else {
 //            emailService.enviarEmailComSenha(dto);
 //        }
-        return user;
+
     }
 
     private void criarIndicacao(User usuario, String codigoIndicacao) {

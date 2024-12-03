@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.*;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
+import br.com.auto.bot.auth.enums.TipoNotificacao;
 import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.Investimento;
 import br.com.auto.bot.auth.model.RoboInvestidor;
@@ -43,6 +44,10 @@ public class InvestimentoService {
     private RendimentoRepository rendimentoRepository;
 
 
+
+    @Autowired
+    private NotificacaoUsuarioService notificacaoService;
+
     public InvestimentoResponseDTO processarInvestimento(InvestimentoRequestDTO request) {
         try {
             User usuario = userRepository.findById(request.getUsuarioId())
@@ -79,13 +84,13 @@ public class InvestimentoService {
             User usuario,
             RoboInvestidor robo,
             InvestimentoRequestDTO request) {
-
+        Investimento novoInvestimento = new Investimento();
         Optional<Investimento> investimentoExistente = investimentoRepository
                 .findInvestimentoAtivoComSaldoByUsuarioAndRobo(usuario, robo,  Set.of(StatusInvestimento.A, StatusInvestimento.PP));
         if (investimentoExistente.isPresent()) {
             validarValorUtrapassaComInvestimentoAtivo(investimentoExistente.get(), request.getValorInvestimento(), robo);
             Investimento investimentoAtual = investimentoExistente.get();
-            Investimento novoInvestimento = new Investimento();
+
 
             BigDecimal valorAcumulado = investimentoAtual.getSaldoAtual().add(request.getValorInvestimento());
             novoInvestimento.setValorInicial(valorAcumulado);
@@ -100,10 +105,8 @@ public class InvestimentoService {
 
             investimentoAtual.setStatus(StatusInvestimento.R);
             investimentoRepository.save(investimentoAtual);
-            return InvestimentoResponseDTO.fromEntity(investimentoAtual);
         } else {
             validarValorMaximoMinimoInvestimento(robo, request.getValorInvestimento());
-            Investimento novoInvestimento = new Investimento();
             novoInvestimento.setUsuario(usuario);
             novoInvestimento.setRoboInvestidor(robo);
             novoInvestimento.setValorInicial(request.getValorInvestimento());
@@ -113,8 +116,15 @@ public class InvestimentoService {
             novoInvestimento.setUrlQrcode(request.getUrlQrcode());
             userRepository.save(usuario);
 
-            return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));
         }
+        notificacaoService.criarNotificacao(
+                novoInvestimento.getUsuario(),
+                "Investimento Processado",
+                "Seu investimento de R$ " + novoInvestimento.getSaldoAtual() + " foi processado com sucesso.",
+                novoInvestimento.getSaldoAtual(),
+                TipoNotificacao.INVESTIMENTO_PAGO
+        );
+        return InvestimentoResponseDTO.fromEntity(investimentoRepository.save(novoInvestimento));
     }
 
     private void validarValorUtrapassaComInvestimentoAtivo(Investimento investimento, BigDecimal valor, RoboInvestidor robo) {

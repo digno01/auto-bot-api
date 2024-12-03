@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.dto;
 
+import br.com.auto.bot.auth.model.Saque;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -17,4 +18,13 @@ public class SaqueResponseDTO {
     private LocalDateTime dataSolicitacao;
     private LocalDateTime dataProcessamento;
 
+    public static SaqueResponseDTO fromEntity(Saque saque) {
+        return new SaqueResponseDTO(
+                saque.getInvestimento().getRoboInvestidor().getNome(),
+                saque.getValorSaque(),
+                saque.getStatus().getDescricao(),
+                saque.getDataSolicitacao(),
+                saque.getDataProcessamento()
+        );
+    }
 }

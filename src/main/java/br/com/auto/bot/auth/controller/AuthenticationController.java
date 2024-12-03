@@ -6,6 +6,7 @@ import br.com.auto.bot.auth.dto.UpdatePasswordDTO;
 import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.exceptions.RegistroDuplicadoException;
 import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
+import br.com.auto.bot.auth.model.permissoes.PerfilAcesso;
 import br.com.auto.bot.auth.responses.LoginResponse;
 import br.com.auto.bot.auth.service.JwtService;
 import br.com.auto.bot.auth.dto.UserDTO;
@@ -23,6 +24,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.HashSet;
 
 @Tag(name = "Autenticação", description = "Endpoints para autenticação e gerenciamento de usuários.")
 @RequestMapping("${app.api.url}/auth")
@@ -52,6 +55,8 @@ public class AuthenticationController {
         dto.setCpf(dto.getCpf().replaceAll("[.-]", ""));
         serviceBean.validateFields(dto);
         User entity = modelMapper.map(dto, User.class);
+        entity.setPerfilAcesso(new HashSet<>());
+        entity.getPerfilAcesso().add(new PerfilAcesso(2L));
         User savedUser = serviceBean.save(entity, dto);
 
         return ResponseEntity.ok(new MessageDTO("Cadastrado realizado com sucesso."));
