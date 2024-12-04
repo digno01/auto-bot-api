@@ -1,5 +1,7 @@
 package br.com.auto.bot.auth.controller;
 
+import br.com.auto.bot.auth.dto.ProcessamentoSaqueRequest;
+import br.com.auto.bot.auth.dto.ProcessamentoSaqueResponse;
 import br.com.auto.bot.auth.dto.SaqueRequestDTO;
 import br.com.auto.bot.auth.dto.SaqueResponseDTO;
 import br.com.auto.bot.auth.model.Saque;
@@ -13,9 +15,12 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @RestController
@@ -39,12 +44,41 @@ public class SaqueController {
         return ResponseEntity.ok(saque);
     }
 
-    @Operation(summary = "Listar solicitações de saque", description = "Retorna todas as solicitações de saque feitas pelo usuário.")
+    @Operation(summary = "Listar solicitações de saque pendente aprovação", description = "Retorna todas as solicitações de saque feitas pelo usuário.")
     @GetMapping
     public ResponseEntity<List<SaqueResponseDTO>> listarSolicitacoesSaque() {
         Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
         List<SaqueResponseDTO> saques = saqueService.listarSolicitacoesSaque(usuarioId);
         return ResponseEntity.ok(saques);
+    }
+
+    @PutMapping("/processar")
+    @Operation(summary = "Processa múltiplos saques",
+            description = "Aprova ou rejeita uma lista de saques baseado nos IDs fornecidos")
+    public ResponseEntity<ProcessamentoSaqueResponse> processarSaques(
+            @RequestBody ProcessamentoSaqueRequest request) {
+        try {
+            List<Saque> saquesProcessados = saqueService.processarSaques(
+                    request.getIdsSaques(),
+                    request.isAprovado()
+            );
+
+            ProcessamentoSaqueResponse response = new ProcessamentoSaqueResponse(
+                    saquesProcessados.size(),
+                    "Saques processados com sucesso",
+                    LocalDateTime.now()
+            );
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity
+                    .status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ProcessamentoSaqueResponse(
+                            0,
+                            "Erro ao processar saques: " + e.getMessage(),
+                            LocalDateTime.now()
+                    ));
+        }
     }
 
 
@@ -57,6 +91,7 @@ public class SaqueController {
             @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
     })
     @GetMapping("/pendentes")
+    @PreAuthorize("hasRole('ROLE_ADMIN')")
     public ResponseEntity<Page<SaqueResponseDTO>> findAllPendentes(CustomPageable pageRequest) {
         Page<SaqueResponseDTO> page = saqueService.findAllPendentes(pageRequest.toPageable());
         return ResponseEntity.ok(page);

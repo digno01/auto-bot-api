@@ -6,7 +6,9 @@ import lombok.Getter;
 public enum TipoNotificacao {
     INVESTIMENTO_SOLICITADO("Investimento Solicitado"),
     INVESTIMENTO_PAGO("Investimento Pago"),
+    INVESTIMENTO_PAGO_PARCIAL("Investimento Pago Parcial"),
     INVESTIMENTO_CANCELADO("Investimento Cancelado"),
+    INVESTIMENTO_REINVESTIDO("Investimento Reinvestido"),
     INVESTIMENTO_FINALIZADO("Investimento Finalizado"),
     SAQUE_SOLICITADO("Saque Solicitado"),
     SAQUE_APROVADO("Saque Aprovado"),

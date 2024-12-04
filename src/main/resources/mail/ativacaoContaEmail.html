@@ -1,85 +1,141 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+	<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
 
-<style>
-html {
-	font-family: sans-serif;
-	line-height: 1.15;
-	padding: 15px 30px;
-	-webkit-text-size-adjust: 100%;
-}
+	<style>
+		html {
+			font-family: 'Arial', sans-serif;
+			line-height: 1.15;
+			padding: 15px 30px;
+			-webkit-text-size-adjust: 100%;
+			background-color: #f8f9fa;
+		}
 
-p {
-	font-size: 1em;
-}
+		body {
+			max-width: 600px;
+			margin: 0 auto;
+			background-color: #ffffff;
+			padding: 20px;
+			border-radius: 8px;
+			box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+		}
 
-a.btn-lg.btn {
-	padding: 1rem;
-    font-size: 1.15rem;
-	line-height: 1.5;
-	border-radius: 0.3rem;
-}
+		.header {
+			text-align: center;
+			margin-bottom: 30px;
+			padding: 20px;
+			background-color: #00273f;
+			border-radius: 8px;
+		}
 
-a.btn-primary {
-	color: #ffffff !important;
-	background-color: #00273f;
-    border-color: #00273f !important;
-}
+		.logo {
+			max-width: 200px;
+			height: auto;
+		}
 
-a.btn {
-	display: inline-block;
-	font-weight: 700;
-	text-align: center;
-	white-space: nowrap;
-	vertical-align: middle;
-	-webkit-user-select: none;
-	-moz-user-select: none;
-	-ms-user-select: none;
-	user-select: none;
-	border: 1px solid transparent;
-	padding: 0.375rem 0.75rem;
-	font-size: 1rem;
-	line-height: 1.5;
-	border-radius: 0.25rem;
-	text-decoration: none;
-	transition: color 0.15s ease-in-out, background-color 0.15s ease-in-out,
-		border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-}
+		p {
+			font-size: 1em;
+			color: #333333;
+			line-height: 1.6;
+			margin-bottom: 15px;
+		}
 
-p.link {
-	width: 550px;
-	color: #007bff;
-	display: block;
-	font-size: 0.8em;
-	font-style: italic;
-	word-wrap: break-word;
-}
-</style>
+		.btn {
+			display: inline-block;
+			font-weight: 700;
+			text-align: center;
+			white-space: nowrap;
+			vertical-align: middle;
+			padding: 12px 24px;
+			font-size: 1rem;
+			line-height: 1.5;
+			border-radius: 8px;
+			text-decoration: none;
+			transition: all 0.3s ease;
+		}
+
+		.btn-primary {
+			color: #ffffff !important;
+			background-color: #1ED467;
+			border: none;
+		}
+
+		.btn-primary:hover {
+			background-color: #19b357;
+			transform: translateY(-1px);
+		}
+
+		.link-container {
+			margin: 20px 0;
+			padding: 15px;
+			background-color: #f8f9fa;
+			border-radius: 8px;
+		}
+
+		.link {
+			width: 100%;
+			color: #1ED467;
+			display: block;
+			font-size: 0.9em;
+			word-wrap: break-word;
+			margin: 10px 0;
+		}
+
+		.footer {
+			margin-top: 30px;
+			padding-top: 20px;
+			border-top: 1px solid #eee;
+			text-align: center;
+			color: #666;
+			font-size: 0.9em;
+		}
+
+		.highlight {
+			color: #1ED467;
+			font-weight: bold;
+		}
+	</style>
 </head>
 <body>
-	<p>
-		Prezado(a) <span th:text="${nome}"></span>,
-	</p>
+<div class="header">
+	<img src="https://saifer.top/assets/logo-novo-DS-tEish.png" alt="Sayfer Investimentos" class="logo"/>
+</div>
 
-	<p>Identificamos uma solicitação de cadastro no consulta pública </p>
-	<p>Para ativar sua conta clique.</p>
-	<br>
+<p>
+	Olá, <span class="highlight" th:text="${nome}"></span>!
+</p>
 
-	<div>
-		<a class="btn btn-lg btn-primary" th:href="${activationUrl}"
-			target="_blank" title="Ativar conta">
-			<span>Ativar conta</span>
-		</a>
-	</div>
-	<br>
+<p>Bem-vindo(a) à Sayfer Investimentos! .</p>
 
-	<p>Se o link acima não funcionar, você pode copiar e colar o
-		seguinte no seu navegador.</p>
+<p>Para começar a sua jornada de investimentos conosco, por favor, ative sua conta clicando no botão abaixo:</p>
+
+<div style="text-align: center; margin: 30px 0;">
+	<a class="btn btn-primary" th:href="${activationUrl}" target="_blank" title="Ativar conta">
+		Ativar minha conta
+	</a>
+</div>
+
+<div class="link-container">
+	<p style="font-size: 0.9em;">Se o botão não funcionar, copie e cole o link abaixo em seu navegador:</p>
 	<p class="link" th:text="${activationUrl}"></p>
-	<br>
+</div>
 
-	<p>Atenciosamente, equipe Ministério de Minas Energia.</p>
+<p>Após a ativação, você terá acesso completo à nossa plataforma e poderá:</p>
+<ul style="color: #333333; line-height: 1.6;">
+	<li>Investir em nossos robôs automatizados</li>
+	<li>Acompanhar seus rendimentos em tempo real</li>
+	<li>Acessar relatórios detalhados</li>
+	<li>Receber suporte especializado</li>
+</ul>
+
+<div class="footer">
+	<p>Atenciosamente,<br>
+		<strong>Equipe Sayfer Investimentos</strong></p>
+
+	<p style="font-size: 0.8em; color: #999;">
+		Este é um e-mail automático. Por favor, não responda.
+	</p>
+</div>
 </body>
 </html>

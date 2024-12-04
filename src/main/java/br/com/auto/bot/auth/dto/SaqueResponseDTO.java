@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @NoArgsConstructor
 public class SaqueResponseDTO {
+    private Long id;
+    private String nomeUsuario;
     private String nomeRobo;
     private BigDecimal valorSolicitado;
     private String statusSaque;
@@ -20,6 +22,8 @@ public class SaqueResponseDTO {
 
     public static SaqueResponseDTO fromEntity(Saque saque) {
         return new SaqueResponseDTO(
+                saque.getId(),
+                saque.getUsuario().getNome(),
                 saque.getInvestimento().getRoboInvestidor().getNome(),
                 saque.getValorSaque(),
                 saque.getStatus().getDescricao(),

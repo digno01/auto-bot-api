@@ -1,10 +1,9 @@
 package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.dto.*;
+import br.com.auto.bot.auth.enums.StatusSaque;
 import br.com.auto.bot.auth.enums.TipoNotificacao;
-import br.com.auto.bot.auth.exceptions.BusinessException;
-import br.com.auto.bot.auth.exceptions.PaymentException;
-import br.com.auto.bot.auth.exceptions.RegistroNaoEncontradoException;
+import br.com.auto.bot.auth.exceptions.*;
 import br.com.auto.bot.auth.model.RoboInvestidor;
 import br.com.auto.bot.auth.model.Saque;
 import br.com.auto.bot.auth.model.User;
@@ -12,7 +11,9 @@ import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Lazy;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,7 +38,9 @@ public class PaymentGatewayService {
     private final String emailContratoGatway;
     private final InvestimentoService investimentoService;
     private final RoboInvestidorService roboInvestidorService;
-    private final SaqueService saqueService;
+    @Lazy
+    @Autowired
+    private SaqueService saqueService;
     private final UserService userService;
     private final NotificacaoUsuarioService notificacaoUsuarioService;
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -52,7 +55,6 @@ public class PaymentGatewayService {
             @Value("${payment.api.emailContratoGatway}") String emailContratoGatway,
             @Value("${payment.api.percentualDeposito}") Integer percentualDeposito,
             UserService userService,
-            SaqueService saqueService,
             InvestimentoService investimentoService,
             RoboInvestidorService roboInvestidorService,
             NotificacaoUsuarioService notificacaoUsuarioService) {
@@ -65,7 +67,6 @@ public class PaymentGatewayService {
         this.callBackPix = callBackPix;
         this.percentualDeposito = percentualDeposito;
         this.emailContratoGatway = emailContratoGatway;
-        this.saqueService = saqueService;
         this.notificacaoUsuarioService = notificacaoUsuarioService;
         this.roboInvestidorService = roboInvestidorService;
     }
@@ -172,7 +173,6 @@ public class PaymentGatewayService {
     public ResponseEntity<Map> makeWithdrawal(SaqueRequestDTO request) {
         try {
             HttpHeaders headers = createHeaders();
-            WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
             // Verifica se o valor de saqueRequestGateway é positivo
             if (request.getValorSaque() == null) {
                 throw new BusinessException("Informe o valor de saqueRequestGateway.");
@@ -189,6 +189,7 @@ public class PaymentGatewayService {
             Optional<User> optuser = userService.findById(ObterDadosUsuarioLogado.getUsuarioLogadoId());
             User user = optuser.get();
 
+            WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
             saqueRequestGateway.setValueCents(request.getValorSaque().multiply(new BigDecimal("100")).intValue());
             saqueRequestGateway.setReceiverName(user.getNome());
             saqueRequestGateway.setReceiverDocument("CPF");
@@ -255,5 +256,59 @@ public class PaymentGatewayService {
 
     public void processarPagamento(PaymentCallBackDTO pagamento) {
         investimentoService.processarPagamentoInvestimento(pagamento);
+    }
+
+    public void processarSaqueIndividual(Saque saque) {
+        try {
+            HttpHeaders headers = createHeaders();
+            // Verifica se o valor de saqueRequestGateway é positivo
+            if (saque.getValorSaque() == null) {
+                throw new BusinessException("Informe o valor de saqueRequestGateway.");
+            } else if(saque.getValorSaque().compareTo(BigDecimal.ZERO) <= 0) {
+                throw new BusinessException("O valor do saqueRequestGateway deve ser positivo.");
+            }
+            BigDecimal saldoDisponivelSaque = saque.getInvestimento().getSaldoAtual();
+            // Verifica se o valor do saqueRequestGateway é menor ou igual ao saldo disponível
+            if (saque.getValorSaque().compareTo(saldoDisponivelSaque) > 0) {
+                throw new BusinessException("O valor do saqueRequestGateway não pode ser maior que o saldo disponível.");
+            }
+            User user = saque.getUsuario();
+            WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
+            saqueRequestGateway.setValueCents(saque.getValorSaque().multiply(new BigDecimal("100")).intValue());
+            saqueRequestGateway.setReceiverName(user.getNome());
+            saqueRequestGateway.setReceiverDocument("CPF");
+            saqueRequestGateway.setPixKey(user.getCpf());
+
+            HttpEntity<WithdrawalRequestDTO> entity = new HttpEntity<>(saqueRequestGateway, headers);
+            System.out.println("Request body: " + objectMapper.writeValueAsString(saqueRequestGateway));
+            // Fazer a requisição
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(
+                    baseUrl + "/saque.php",
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            if (response.getStatusCode().value() == HttpStatus.OK.value()) {
+                if(response.getBody().contains("\"status\":\"error\"")){
+                    throw new SaqueSaldoInsuficienteException("Saldo insuficiente");
+                }
+                PaymentResponseDTO responseBody =  objectMapper.readValue(response.getBody(), PaymentResponseDTO.class);
+                if (responseBody != null && "success".equals(responseBody.getStatus())) {
+                    saque.setIdSaqueGateway(responseBody.getResponse().getId());
+                    saque.setEndToEndId(responseBody.getResponse().getEndToEndId());
+                    saque.setStatus(StatusSaque.A);
+                    saqueService.save(saque);
+                }else{
+                    throw new SaqueSaldoInsuficienteException("Saldo insuficiente");
+                }
+            }
+        } catch (HttpServerErrorException e) {e.printStackTrace();
+            System.err.println("Server error: " + e.getResponseBodyAsString());
+            throw new SaqueProcessamentoGatwayException("Erro no servidor ao processar saque: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error processing withdrawal: " + e.getMessage());
+            throw new SaqueProcessamentoGatwayException("Erro ao processar saque: " + e.getMessage());
+        }
     }
 }

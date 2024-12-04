@@ -152,16 +152,17 @@ public class UserService extends GenericService<User, Long> {
             if (StringUtils.isNotBlank(dto.getCodigoIndicacaoIndicador())) {
                 criarIndicacao(user, dto.getCodigoIndicacaoIndicador());
             }
+//            if (dto.getIsExterno()) {
+//                emailService.envioEmailAtivacaoConta(user);
+//            } else {
+                emailService.enviarEmailComSenha(dto);
+//            }
             return user;
         }catch (Exception e){
             throw new BusinessException(e.getMessage());
         }
 
-//        if (dto.getIsExterno()) {
-//            emailService.envioEmailAtivacaoConta(user);
-//        } else {
-//            emailService.enviarEmailComSenha(dto);
-//        }
+
 
     }
 
@@ -331,9 +332,9 @@ public class UserService extends GenericService<User, Long> {
 
     public void recoverPassword(String email, String ipAddress) throws RegistroNaoEncontradoException, BusinessException {
         User user = repository.findByEmail(email)
-                .orElseThrow(() -> new RegistroNaoEncontradoException(messageSource.getMessage("ME031", null, null)));
+                .orElseThrow(() -> new BusinessException(messageSource.getMessage("ME031", null, null)));
 
-        controlarNumeroTentativasRecuperarSenha(user);
+//        controlarNumeroTentativasRecuperarSenha(user);
         // Gera um token com validade de 10 minutos
         user.setDtUltimaTentativaRecupSenha(LocalDateTime.now());
         gerarToken(user);

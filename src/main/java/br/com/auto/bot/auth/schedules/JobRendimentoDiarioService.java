@@ -58,7 +58,7 @@ public class JobRendimentoDiarioService {
 
     @Transactional
     //@Scheduled(cron = "0 */30 * * * *")
-    @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 3:00
+    @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 1:00
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 

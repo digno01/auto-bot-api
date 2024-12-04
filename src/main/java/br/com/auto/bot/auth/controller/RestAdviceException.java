@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.controller;
 
 import br.com.auto.bot.auth.exceptions.BusinessException;
+import br.com.auto.bot.auth.exceptions.RegistroDuplicadoException;
 import br.com.auto.bot.auth.model.error.ErrorHandleDTO;
 import br.com.auto.bot.auth.model.error.MessageDTO;
 import io.jsonwebtoken.ExpiredJwtException;
@@ -9,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.MessageSource;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.converter.HttpMessageNotReadableException;
+import org.springframework.security.authorization.AuthorizationDeniedException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -49,6 +51,11 @@ public class RestAdviceException {
     public ErrorHandleDTO handleCamposInvalidos(HttpMessageNotReadableException e) {
         return new ErrorHandleDTO(e.getMessage());
     }
+    @ExceptionHandler(RegistroDuplicadoException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public ErrorHandleDTO handleCamposInvalidos(RegistroDuplicadoException e) {
+        return new ErrorHandleDTO(e.getMessage());
+    }
 
 
     @ExceptionHandler(BusinessException.class)
@@ -73,6 +80,12 @@ public class RestAdviceException {
     @ExceptionHandler(Exception.class)
     public MessageDTO handleRuntimeException(Exception e) {
         return new MessageDTO(e.getMessage());
+    }
+
+    @ExceptionHandler(AuthorizationDeniedException.class)
+    @ResponseStatus(HttpStatus.FORBIDDEN)
+    public MessageDTO handleBusinessException(AuthorizationDeniedException e) {
+        return new MessageDTO("Usuário sem permissão para acessar este recurso.");
     }
 
 

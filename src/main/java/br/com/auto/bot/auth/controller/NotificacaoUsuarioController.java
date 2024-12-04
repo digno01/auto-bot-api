@@ -53,26 +53,4 @@ public class NotificacaoUsuarioController {
         long quantidade = service.contarNotificacoesNaoLidas(ObterDadosUsuarioLogado.getUsuarioLogadoId());
         return ResponseEntity.ok(quantidade);
     }
-
-    @GetMapping("/teste")
-    @PreAuthorize("hasRole('ROLE_ADMIN')")
-//    @PreAuthorize("hasAuthority('ROLE_ADMIN')")
-    public String teste()throws Exception{
-        try{
-            return "ok";
-        }catch (Exception e ){
-            throw new BusinessException(e.getMessage());
-        }
-    }
-
-    @GetMapping("/check-authorities")
-    public ResponseEntity<Map<String, Object>> checkAuthorities(Authentication authentication) {
-        Map<String, Object> response = new HashMap<>();
-        response.put("username", authentication.getName());
-        response.put("authorities", authentication.getAuthorities().stream()
-                .map(GrantedAuthority::getAuthority)
-                .collect(Collectors.toList()));
-        response.put("isAuthenticated", authentication.isAuthenticated());
-        return ResponseEntity.ok(response);
-    }
 }

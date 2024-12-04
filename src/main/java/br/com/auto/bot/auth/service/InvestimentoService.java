@@ -141,7 +141,7 @@ public class InvestimentoService {
 
     @Transactional(readOnly = true)
     public List<InvestimentoResponseDTO> buscarInvestimentosAtivos(Long usuarioId) {
-        List<StatusInvestimento> statusList = Arrays.asList(StatusInvestimento.A, StatusInvestimento.PP);
+        List<StatusInvestimento> statusList = Arrays.asList(StatusInvestimento.A, StatusInvestimento.PP, StatusInvestimento.SL);
 
         // Chama o método do repositório com a lista de status
         return investimentoRepository.findByUsuarioIdAndStatusIn(usuarioId, statusList)
@@ -304,5 +304,10 @@ public class InvestimentoService {
                 investimentoRepository.saveAll(investimentosAnteriores);
             }
         }
+    }
+
+    @Transactional
+    public void salvar(Investimento inv){
+        investimentoRepository.save(inv);
     }
 }
