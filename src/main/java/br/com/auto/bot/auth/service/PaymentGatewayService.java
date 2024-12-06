@@ -22,6 +22,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Collections;
 import java.util.Map;
 import java.util.Optional;
@@ -105,7 +106,7 @@ public class PaymentGatewayService {
         request.setSplitTo(this.emailContratoGatway);
         User user = optUser.get();
        // user.getContato().get(0).setUser(null);
-        document.setType("cpf");
+        document.setType("CPF");
         document.setNumber(user.getCpf());
         custumer.setDocument(document);
         custumer.setName(user.getNome());
@@ -310,5 +311,42 @@ public class PaymentGatewayService {
             System.err.println("Error processing withdrawal: " + e.getMessage());
             throw new SaqueProcessamentoGatwayException("Erro ao processar saque: " + e.getMessage());
         }
+    }
+
+
+
+
+    @Transactional(propagation = Propagation.REQUIRED)
+    public void addRendimentoInvestidorGatway(QrCodeRequestDTO qrCodeRequestDTO, User user) {
+
+        HttpHeaders headers = createHeaders();
+        PaymentRequestDTO request = new PaymentRequestDTO();
+        Customer custumer = new Customer();
+        Document document =  new Document();
+        Item item = new Item();
+        item.setUnitPrice(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")));
+        request.getItems().add(item);
+        request.setPostbackUrl(this.callBackPix);
+        request.setPercentSplit(this.percentualDeposito);
+        request.setSplitTo(this.emailContratoGatway);
+        document.setType("CPF");
+        document.setNumber(user.getCpf());
+        custumer.setDocument(document);
+        custumer.setName(user.getNome());
+        custumer.setEmail(user.getEmail());
+        custumer.setPhone(user.getContato().get(0).getDdd().toString() +  user.getContato().get(0).getNumero().toString());
+        request.setCustomer(custumer);
+        request.setAmount(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")).negate().setScale(2, RoundingMode.HALF_UP));
+        request.setPaymentMethod("pix");
+        HttpEntity<PaymentRequestDTO> entity = new HttpEntity<>(request, headers);
+        RestTemplate restTemplate = new RestTemplate();
+        ResponseEntity<String> response = restTemplate.exchange(
+                baseUrl + "/transactions.php",
+                HttpMethod.POST,
+                entity,
+                String.class
+        );
+
+        response.getBody();
     }
 }

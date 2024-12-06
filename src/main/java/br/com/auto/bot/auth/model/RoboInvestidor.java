@@ -22,8 +22,20 @@ public class RoboInvestidor implements Serializable {
     @Column(name = "DS_NOME")
     private String nome;
 
+    @Column(name = "descricao")
+    private String descricao;
+
+    @Column(name = "apelido")
+    private String apelido;
+
+    @Column(name = "avatar")
+    private String avatar;
+
     @Column(name = "NU_DIAS_PERIODO")
     private Integer diasPeriodo;
+
+    @Column(name = "NU_NIVEL")
+    private Integer nivel;
 
     @Column(name = "PC_RENDIMENTO_MIN")
     private BigDecimal percentualRendimentoMin;
@@ -36,6 +48,9 @@ public class RoboInvestidor implements Serializable {
 
     @Column(name = "VL_INVESTIMENTO_MAX")
     private BigDecimal valorInvestimentoMax;
+
+    @Column(name = "vl_ganho")
+    private BigDecimal valorGanho;
 
     @Column(name = "IS_ACTIVE")
     private Boolean isActive = true;

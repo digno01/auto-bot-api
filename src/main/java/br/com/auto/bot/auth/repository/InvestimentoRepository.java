@@ -194,4 +194,13 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
     List<Investimento> findByDataLiberacaoLessThanEqualAndIsLiberadoSaqueFalse(
             @Param("dataAtual") LocalDateTime dataAtual
     );
+
+
+    @Query("SELECT i FROM Investimento i " +
+            "WHERE i.usuario.id = :userId " +
+            "AND i.isLiberadoSaque = true " +
+            "AND i.status <> 'C' " +
+            "AND i.saldoAtual > 0 order by i.dataInvestimento desc ")
+    List<Investimento> listarRendimentos(@Param("userId") Long userId);
+
 }

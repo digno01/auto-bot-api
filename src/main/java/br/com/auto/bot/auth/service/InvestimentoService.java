@@ -106,6 +106,12 @@ public class InvestimentoService {
             investimentoAtual.setStatus(StatusInvestimento.R);
             investimentoRepository.save(investimentoAtual);
         } else {
+            Boolean temInvestimento = notificacaoService.contemNotificacaoInvestimento(usuario.getId(), TipoNotificacao.INVESTIMENTO_PAGO);
+            if(!temInvestimento){
+                BigDecimal valorInvestimento = request.getValorInvestimento();
+                BigDecimal dezPorcento = valorInvestimento.multiply(new BigDecimal("0.10"));
+                novoInvestimento.setValorDepositoComissao(dezPorcento);
+            }
             validarValorMaximoMinimoInvestimento(robo, request.getValorInvestimento());
             novoInvestimento.setUsuario(usuario);
             novoInvestimento.setRoboInvestidor(robo);
@@ -277,8 +283,8 @@ public class InvestimentoService {
             }else{
                 investimento.setStatus(StatusInvestimento.A);
             }
-            investimento.setValorInicial(valorPagamento);
             investimento.setSaldoAtual(valorPagamento);
+            investimento.setValorEfetuadoPIX(valorPagamento);
             investimentoRepository.save(investimento);
             User user = investimento.getUsuario();
 
@@ -309,5 +315,20 @@ public class InvestimentoService {
     @Transactional
     public void salvar(Investimento inv){
         investimentoRepository.save(inv);
+    }
+
+    public List<InvestimentoSaqueDTO> listarRendimentos(Long usuarioId) {
+        List<Investimento> investimentos = investimentoRepository.listarRendimentos(usuarioId);
+
+        return investimentos.stream()
+                .map(investimento -> new InvestimentoSaqueDTO(
+                        investimento.getId(),
+                        investimento.getRoboInvestidor().getNome(),
+                        investimento.getDataInvestimento(),
+                        investimento.getDataLiberacao(),
+                        investimento.getValorInicial(),
+                        investimento.getSaldoAtual()
+                ))
+                .collect(Collectors.toList());
     }
 }

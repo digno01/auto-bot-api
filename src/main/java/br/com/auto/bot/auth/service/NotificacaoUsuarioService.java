@@ -54,4 +54,8 @@ public class NotificacaoUsuarioService {
     public long contarNotificacoesNaoLidas(Long usuarioId) {
         return repository.countByUsuarioIdAndLida(usuarioId, false);
     }
+
+    public Boolean contemNotificacaoInvestimento(Long id, TipoNotificacao investimentoPago) {
+        return repository.contemNotificacaoInvestimento(id, investimentoPago);
+    }
 }

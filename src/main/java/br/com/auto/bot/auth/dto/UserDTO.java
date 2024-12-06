@@ -3,12 +3,14 @@ package br.com.auto.bot.auth.dto;
 import br.com.auto.bot.auth.validation.cpf.IsValidCpf;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
@@ -61,5 +63,11 @@ public class UserDTO extends LoginDTO {
     private String codigoIndicacaoIndicador; // Código de quem está indicando
 
     private String codigoIndicacao; // Código do usuário (gerado automaticamente)
+
+    private BigDecimal saldoComissao = BigDecimal.ZERO;
+    private Integer nivelConta = 0;
+    private Integer qtdIndicacoesDiretas = 0;
+    private Integer qtdIndicacoesIndiretas = 0;
+
 
 }

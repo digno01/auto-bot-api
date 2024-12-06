@@ -12,6 +12,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/robo-investidor")
 @Tag(name = "Robô Investidor", description = "Endpoints para gerenciar robôs de investimento automatizado.")
@@ -34,6 +36,18 @@ public class RoboInvestidorController {
         return ResponseEntity.ok(page);
     }
 
+    @Operation(summary = "Listar robôs investidores",
+            description = "Retorna uma lista paginada de todos os robôs investidores cadastrados.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listagem realizada com sucesso"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para acessar este recurso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    @GetMapping("/for-user")
+    public ResponseEntity<List<RoboInvestidor>> findRoboUserPodeInvestir() {
+        return ResponseEntity.ok(service.getRobosInvestidorForUser());
+    }
+
     @Operation(summary = "Buscar robô por ID",
             description = "Retorna um robô investidor específico com base no ID fornecido.")
     @ApiResponses(value = {
@@ -46,6 +60,22 @@ public class RoboInvestidorController {
         return ResponseEntity.ok(service.findById(id));
     }
 
+
+    @Operation(summary = "Listar robôs investidores por nível",
+            description = "Retorna uma lista paginada de robôs investidores filtrados por nível.")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Listagem realizada com sucesso"),
+            @ApiResponse(responseCode = "400", description = "Nível inválido"),
+            @ApiResponse(responseCode = "403", description = "Sem permissão para acessar este recurso"),
+            @ApiResponse(responseCode = "500", description = "Erro interno do servidor")
+    })
+    @GetMapping("/nivel/{nivel}")
+    public ResponseEntity<Page<RoboInvestidor>> findByNivel(
+            @PathVariable Integer nivel,
+            CustomPageable pageRequest) {
+        Page<RoboInvestidor> page = service.findByNivel(nivel, pageRequest.toPageable());
+        return ResponseEntity.ok(page);
+    }
 //    @Operation(summary = "Criar novo robô",
 //            description = "Cria um novo robô investidor com as configurações especificadas.")
 //    @ApiResponses(value = {
@@ -58,7 +88,7 @@ public class RoboInvestidorController {
 //        return ResponseEntity.ok(service.save(roboInvestidor));
 //    }
 
-    @Operation(summary = "Atualizar robô",
+    /*@Operation(summary = "Atualizar robô",
             description = "Atualiza as configurações de um robô investidor existente.")
     @ApiResponses(value = {
             @ApiResponse(responseCode = "200", description = "Robô atualizado com sucesso"),
@@ -83,5 +113,5 @@ public class RoboInvestidorController {
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         service.delete(id);
         return ResponseEntity.noContent().build();
-    }
+    }*/
 }

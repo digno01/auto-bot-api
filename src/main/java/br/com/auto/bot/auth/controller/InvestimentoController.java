@@ -71,10 +71,19 @@ public class InvestimentoController {
             @ApiResponse(responseCode = "200", description = "Lista de investimentos para saque retornada com sucesso."),
             @ApiResponse(responseCode = "404", description = "Usuário não encontrado.")
     })
+
     @GetMapping("/disponiveis-para-saque")
     public ResponseEntity<List<InvestimentoSaqueDTO>> listarInvestimentosParaSaque() {
         Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
         List<InvestimentoSaqueDTO> investimentosParaSaque = investimentoService.listarInvestimentosParaSaque(usuarioId);
+        return ResponseEntity.ok(investimentosParaSaque);
+    }
+
+
+    @GetMapping("/rendimentos")
+    public ResponseEntity<List<InvestimentoSaqueDTO>> listarRendimentos() {
+        Long usuarioId = ObterDadosUsuarioLogado.obterDadosUsuarioLogado().getId();
+        List<InvestimentoSaqueDTO> investimentosParaSaque = investimentoService.listarRendimentos(usuarioId);
         return ResponseEntity.ok(investimentosParaSaque);
     }
 

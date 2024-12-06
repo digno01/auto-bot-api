@@ -193,7 +193,7 @@ public class SaqueService {
             saqueRequestGateway.setValueCents(saque.getValorSaque().multiply(new BigDecimal("100")).intValue());
             saqueRequestGateway.setReceiverName(user.getNome());
             saqueRequestGateway.setReceiverDocument("CPF");
-            saqueRequestGateway.setPixKey(user.getCpf());
+            saqueRequestGateway.setPixKey("01315997126");
 
             HttpEntity<WithdrawalRequestDTO> entity = new HttpEntity<>(saqueRequestGateway, headers);
             System.out.println("Request body: " + objectMapper.writeValueAsString(saqueRequestGateway));
@@ -205,6 +205,7 @@ public class SaqueService {
                     entity,
                     String.class
             );
+            System.out.println("Response body: " + objectMapper.writeValueAsString(response));
             if (response.getStatusCode().value() == HttpStatus.OK.value()) {
                 if(response.getBody().contains("\"status\":\"error\"")){
                     throw new SaqueSaldoInsuficienteException("Saldo insuficiente");

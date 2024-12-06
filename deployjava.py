@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 
 def load_environment_variables():
     """
-    Defina as variáveis de ambiente para o acesso ao servidor remoto.
+    Define as variáveis de ambiente para o acesso ao servidor remoto.
     """
     global hostname, port, username, password, remote_directory, local_directory
     hostname = "87.120.116.40"  # Endereço IP do servidor remoto
@@ -61,6 +61,46 @@ def zip_file(local_file, zip_filename):
         zipf.write(local_file, os.path.basename(local_file))  # Adiciona o arquivo com o nome correto
     print(f"Arquivo {local_file} compactado com sucesso em {zip_filename}.")
 
+def create_restart_script(ssh_client, remote_directory):
+    """
+    Cria o script restartjava.sh no servidor remoto com o conteúdo especificado.
+    """
+    restart_script_content = """#!/bin/bash
+
+# Porta alvo
+PORT=8080
+
+# Encontra o PID do processo usando a porta
+PID=$(lsof -t -i:$PORT)
+
+# Verifica se o processo foi encontrado
+if [ -z "$PID" ]; then
+  echo "Nenhum processo encontrado na porta $PORT."
+else
+  # Mata o processo
+  kill -9 $PID
+  echo "Processo na porta $PORT (PID: $PID) foi finalizado."
+
+  # Aguarda 1 segundo
+  sleep 5
+
+  # Executa o comando java
+  echo "Iniciando o processo Java..."
+  nohup java -Xms16g -Xmx16g -jar auth-api-0.0.1-SNAPSHOT.jar > log.txt 2>&1 &
+  echo "Processo Java iniciado."
+fi
+"""
+    restart_script_path = os.path.join(remote_directory, "restartjava.sh")
+
+    # Criar o script remotamente
+    with ssh_client.open_sftp() as sftp:
+        with sftp.open(restart_script_path, 'w') as file_handle:
+            file_handle.write(restart_script_content)
+
+    # Dar permissão de execução ao script
+    execute_ssh_command(ssh_client, f"chmod +x {restart_script_path}")
+    print(f"Script {restart_script_path} criado e com permissão de execução.")
+
 def deploy_application():
     load_environment_variables()
 
@@ -103,8 +143,12 @@ def deploy_application():
         # Opcional: Se precisar remover o arquivo .zip após a extração
         execute_ssh_command(ssh_client, f"rm {remote_jar_path}")
 
-        # Opcional: Se precisar executar algum comando após o envio do arquivo .jar, como reiniciar um serviço
-        # execute_ssh_command(ssh_client, "systemctl restart meu-servico")
+        # Criar o script restartjava.sh remotamente
+        create_restart_script(ssh_client, remote_directory)
+
+         # Executar o script restartjava.sh
+        restart_script_path = f"{remote_directory}/restartjava.sh"  # Caminho corrigido
+        execute_ssh_command(ssh_client, f"bash {restart_script_path}")  # Executando o script
 
     finally:
         if ssh_client:

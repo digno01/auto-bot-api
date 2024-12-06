@@ -64,6 +64,7 @@ public class RendimentoService {
                 .tipoRendimento(rendimento.getTipoRendimento().getDescricao())
                 .percentualRendimento(rendimento.getPercentualRendimento())
                 .tipoResultado(rendimento.getTipoResultado())
+                .valorAcumulado(rendimento.getValorAcumulado())
                 .build();
     }
 }

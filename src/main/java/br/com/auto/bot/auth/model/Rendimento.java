@@ -37,6 +37,9 @@ public class Rendimento implements Serializable {
     @Column(name = "VL_RENDIMENTO")
     private BigDecimal valorRendimento;
 
+    @Column(name = "VL_ACUMULADO")
+    private BigDecimal valorAcumulado;
+
     @Column(name = "DT_RENDIMENTO")
     @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataRendimento;

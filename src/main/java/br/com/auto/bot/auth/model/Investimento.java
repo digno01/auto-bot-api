@@ -27,6 +27,12 @@ public class Investimento implements Serializable {
     @Column(name = "ID_TRANSACTION_GATEWAY")
     private BigDecimal idTransacaoPagamentoGateway;
 
+    @Column(name = "VL_COMISSAO_DEPOSITO")
+    private BigDecimal valorDepositoComissao;
+
+    @Column(name = "VL_EFETUADO_PIX")
+    private BigDecimal valorEfetuadoPIX;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "PK_USUARIO")
     @JsonManagedReference

@@ -25,4 +25,5 @@ public class RendimentoDTO {
     private BigDecimal rendimentoMax;
     private Boolean isLucro;  // true para lucro, false para perda
     private TipoResultado tipoResultado;
+    private BigDecimal valorAcumulado;
 }

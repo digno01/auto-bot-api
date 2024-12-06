@@ -81,9 +81,18 @@ public class User implements IDeletedTable, IActiveTable, Serializable, UserDeta
     @JoinTable(name = "TB_USUARIO_PERFIL", joinColumns = @JoinColumn(name = "PK_USUARIO"), inverseJoinColumns = @JoinColumn(name = "PK_PERFIL_ACESSO"))
     private Set<PerfilAcesso> perfilAcesso = new HashSet<>();
 
-//    @Column(name = "vl_saldo_disponivel")
-//    private BigDecimal saldoDisponivel = BigDecimal.ZERO;
-//
+    @Column(name = "vl_comissao")
+    private BigDecimal saldoComissao = BigDecimal.ZERO;
+
+    @Column(name = "nivel_conta")
+    private Integer nivelConta = 0;
+
+    @Column(name = "qtd_indicacoes_diretas")
+    private Integer qtdIndicacoesDiretas = 0;
+
+    @Column(name = "qtd_indicacoes_indiretas")
+    private Integer qtdIndicacoesIndiretas = 0;
+
 //    @Column(name = "vl_saldo_investido")
 //    private BigDecimal saldoInvestido = BigDecimal.ZERO;
 //

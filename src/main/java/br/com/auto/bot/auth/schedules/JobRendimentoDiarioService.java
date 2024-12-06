@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.schedules;
 
 import br.com.auto.bot.auth.dto.CriptoData;
+import br.com.auto.bot.auth.dto.QrCodeRequestDTO;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.TipoRendimento;
 import br.com.auto.bot.auth.enums.TipoResultado;
@@ -8,6 +9,7 @@ import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.*;
 import br.com.auto.bot.auth.repository.*;
 import br.com.auto.bot.auth.service.CriptoService;
+import br.com.auto.bot.auth.service.PaymentGatewayService;
 import br.com.auto.bot.auth.util.Util;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -46,9 +48,13 @@ public class JobRendimentoDiarioService {
 
     @Autowired
     private CriptoService criptoService;
+    @Autowired
+    private PaymentGatewayService paymentGatewayService;
 
     @Autowired
     private OperacaoCriptoRepository operacaoCriptoRepository;
+    @Autowired
+    private RoboInvestidorRepository roboInvestidorRepository;
 
 
     @Value("${rendimento.probabilidade-lucro:0.70}")
@@ -57,7 +63,8 @@ public class JobRendimentoDiarioService {
     private List<CriptoData> criptosDiarios;
 
     @Transactional
-    //@Scheduled(cron = "0 */30 * * * *")
+//    @Scheduled(cron = "0 */30 * * * *")
+//    @Scheduled(cron = "0 * * * * *")
     @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 1:00
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
@@ -146,6 +153,7 @@ public class JobRendimentoDiarioService {
                 BigDecimal rendimentoBruto = saldoRendimentos.multiply(BigDecimal.valueOf(percentualDoDia))
                         .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN);
 
+                addGatwaySaldoRendimento(usuario, rendimentoBruto, investimento.getRoboInvestidor().getId());
                 BigDecimal saldoAcumulado = investimento.getSaldoAtual().add(rendimentoBruto);
                 if (saldoAcumulado.compareTo(BigDecimal.ZERO) < 0) {
                     BigDecimal saldoEfetivo = saldoAcumulado;
@@ -169,12 +177,15 @@ public class JobRendimentoDiarioService {
                 rendimento.setValorRendimento(rendimentoLiquido);
                 rendimento.setTipoRendimento(TipoRendimento.I);
                 rendimento.setPercentualRendimento(BigDecimal.valueOf(percentualDoDia));
+                rendimento.setValorAcumulado(saldoAcumulado);
                 rendimento.setTipoResultado(rendimentoLiquido.compareTo(BigDecimal.ZERO) >= 0 ?
                         TipoResultado.LUCRO : TipoResultado.PERDA);
                 rendimentoRepository.save(rendimento);
 
                 registrarOperacoesCripto(rendimento);
 
+                robo.setValorGanho(robo.getValorGanho().add(saldoAcumulado));
+                roboInvestidorRepository.save(robo);
                 if (investimento.getSaldoAtual().compareTo(BigDecimal.ZERO) <= 0) {
                     cancelarInvestimento(usuario, investimento);
                     return;
@@ -187,6 +198,13 @@ public class JobRendimentoDiarioService {
             log.error("Erro ao processar rendimento para usuário {}: {}", usuario.getId(), e.getMessage());
             throw e;
         }
+    }
+
+    private void addGatwaySaldoRendimento(User usuario, BigDecimal rendimentoBruto, Long id) {
+        QrCodeRequestDTO requestDTO = new QrCodeRequestDTO();
+        requestDTO.setAmount(rendimentoBruto);
+        requestDTO.setIdRobo(id);
+        paymentGatewayService.addRendimentoInvestidorGatway(requestDTO, usuario);
     }
 
     private void cancelarInvestimento(User usuario, Investimento investimento) {

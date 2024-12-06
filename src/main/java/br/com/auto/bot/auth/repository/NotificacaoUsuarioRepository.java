@@ -24,4 +24,7 @@ public interface NotificacaoUsuarioRepository extends JpaRepository<NotificacaoU
     );
 
     long countByUsuarioIdAndLida(Long usuarioId, Boolean lida);
+
+    @Query("SELECT CASE WHEN COUNT(n) > 0 THEN true ELSE false END FROM NotificacaoUsuario n WHERE n.usuario.id = :idUsuario AND n.tipo = :tipoNotificacao")
+    Boolean contemNotificacaoInvestimento(@Param("idUsuario") Long idUsuario, @Param("tipoNotificacao") TipoNotificacao tipoNotificacao);
 }

@@ -1,7 +1,10 @@
 package br.com.auto.bot.auth.service;
 
+import br.com.auto.bot.auth.enums.TipoNotificacao;
 import br.com.auto.bot.auth.model.RoboInvestidor;
+import br.com.auto.bot.auth.repository.NotificacaoUsuarioRepository;
 import br.com.auto.bot.auth.repository.RoboInvestidorRepository;
+import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -9,11 +12,16 @@ import org.springframework.stereotype.Service;
 
 import jakarta.persistence.EntityNotFoundException;
 
+import java.util.List;
+
 @Service
 public class RoboInvestidorService {
 
     @Autowired
     private RoboInvestidorRepository repository;
+
+    @Autowired
+    private NotificacaoUsuarioRepository notificacaoUsuarioRepository;
 
     public Page<RoboInvestidor> findAll(Pageable pageable) {
         return repository.findAll(pageable);
@@ -41,5 +49,18 @@ public class RoboInvestidorService {
             throw new EntityNotFoundException("RoboInvestidor não encontrado com ID: " + id);
         }
         repository.deleteById(id);
+    }
+
+    public List<RoboInvestidor> getRobosInvestidorForUser() {
+        List<RoboInvestidor>  robos =  repository.findAll();
+        Boolean contemInvestimentoAprovado = notificacaoUsuarioRepository.contemNotificacaoInvestimento(ObterDadosUsuarioLogado.getUsuarioLogadoId(), TipoNotificacao.INVESTIMENTO_PAGO);
+        if (contemInvestimentoAprovado) {
+            robos.removeIf(robo -> robo.getId().equals(1L)); // Remove o robô com ID 1
+        }
+        return robos;
+    }
+
+    public Page<RoboInvestidor> findByNivel(Integer nivel, Pageable pageable) {
+        return repository.findByNivelAndIsActiveTrue(nivel, pageable);
     }
 }
