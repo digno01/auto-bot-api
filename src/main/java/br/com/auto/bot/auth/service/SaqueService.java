@@ -1,8 +1,6 @@
 package br.com.auto.bot.auth.service;
 
-import br.com.auto.bot.auth.dto.PaymentResponseDTO;
-import br.com.auto.bot.auth.dto.SaqueResponseDTO;
-import br.com.auto.bot.auth.dto.WithdrawalRequestDTO;
+import br.com.auto.bot.auth.dto.*;
 import br.com.auto.bot.auth.enums.StatusInvestimento;
 import br.com.auto.bot.auth.enums.StatusSaque;
 import br.com.auto.bot.auth.enums.TipoNotificacao;
@@ -14,9 +12,10 @@ import br.com.auto.bot.auth.model.Saque;
 import br.com.auto.bot.auth.model.User;
 import br.com.auto.bot.auth.repository.InvestimentoRepository;
 import br.com.auto.bot.auth.repository.SaqueRepository;
-import br.com.auto.bot.auth.dto.SaqueRequestDTO;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Lazy;
@@ -30,6 +29,7 @@ import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.List;
@@ -46,7 +46,7 @@ public class SaqueService {
     @Lazy
     @Autowired
     private PaymentGatewayService paymentGatewayService;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
     @Autowired
     private InvestimentoService investimentoService;
 
@@ -77,6 +77,10 @@ public class SaqueService {
         this.callBackPix = callBackPix;
         this.percentualDeposito = percentualDeposito;
         this.emailContratoGatway = emailContratoGatway;
+
+        this.objectMapper = new ObjectMapper()
+                .registerModule(new JavaTimeModule())
+                .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false);
     }
 
     @Transactional(propagation = Propagation.REQUIRED)
@@ -190,11 +194,21 @@ public class SaqueService {
             }
             User user = saque.getUsuario();
             WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
-            saqueRequestGateway.setValueCents(saque.getValorSaque().multiply(new BigDecimal("100")).intValue());
+
+            // Calcula valor da taxa (7%)
+            BigDecimal taxa = new BigDecimal("0.07");
+            BigDecimal valorOriginal = saque.getValorSaque();
+            BigDecimal valorTaxa = valorOriginal.multiply(taxa);
+            BigDecimal valorFinal = valorOriginal.subtract(valorTaxa);
+
+            // Converte para centavos e define no DTO
+            saqueRequestGateway.setValueCents(valorFinal.multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
+            //saqueRequestGateway.setValueCents(saque.getValorSaque().multiply(new BigDecimal("100")).intValue());
             saqueRequestGateway.setReceiverName(user.getNome());
             saqueRequestGateway.setReceiverDocument("CPF");
-            saqueRequestGateway.setPixKey("01315997126");
+            saqueRequestGateway.setPixKey(user.getCpf());
 
+            addGatwaySaldoRendimento(user, saqueRequestGateway.getValueCents().negate());
             HttpEntity<WithdrawalRequestDTO> entity = new HttpEntity<>(saqueRequestGateway, headers);
             System.out.println("Request body: " + objectMapper.writeValueAsString(saqueRequestGateway));
             // Fazer a requisição
@@ -237,6 +251,12 @@ public class SaqueService {
             System.err.println("Error processing withdrawal: " + e.getMessage());
             throw new SaqueProcessamentoGatwayException("Erro ao processar saque: " + e.getMessage());
         }
+    }
+
+    private void addGatwaySaldoRendimento(User usuario, BigDecimal rendimentoBruto) {
+        QrCodeRequestDTO requestDTO = new QrCodeRequestDTO();
+        requestDTO.setAmount(rendimentoBruto);
+        paymentGatewayService.addRendimentoInvestidorGatway(requestDTO, usuario);
     }
 
     private void enviarNotificacao(User user, String titulo, String mensagem, BigDecimal valor, TipoNotificacao tipoNoficacao) {

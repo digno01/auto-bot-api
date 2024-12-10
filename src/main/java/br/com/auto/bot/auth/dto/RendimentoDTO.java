@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.dto;
 
 import br.com.auto.bot.auth.enums.TipoResultado;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -15,6 +16,7 @@ import java.time.LocalDateTime;
 public class RendimentoDTO {
     private Long id;
     private BigDecimal valorRendimento;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataRendimento;
     private String tipoRendimento;
     private BigDecimal percentualRendimento;

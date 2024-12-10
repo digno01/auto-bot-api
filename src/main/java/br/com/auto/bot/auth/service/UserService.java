@@ -139,6 +139,7 @@ public class UserService extends GenericService<User, Long> {
     public User save(User entity, UserDTO dto) throws RegistroNaoEncontradoException {
         try{
 
+            entity.setEmail(entity.getEmail().toLowerCase());
             entity.setContato(null);
             entity.setPassword(passwordEncoder.encode(entity.getPassword()));
             String token = jwtService.generateRecoverToken(entity);
@@ -155,7 +156,12 @@ public class UserService extends GenericService<User, Long> {
 //            if (dto.getIsExterno()) {
 //                emailService.envioEmailAtivacaoConta(user);
 //            } else {
-                emailService.enviarEmailComSenha(dto);
+//            emailService.enviarEmailComSenha(dto)
+//                .exceptionally(throwable -> {
+//                    // Log do erro, mas não impede o fluxo principal
+//                    log.error("Erro ao enviar email: ", throwable);
+//                    return null;
+//            });
 //            }
             return user;
         }catch (Exception e){
@@ -168,45 +174,69 @@ public class UserService extends GenericService<User, Long> {
 
     private void criarIndicacao(User usuario, String codigoIndicacao) {
         try {
-            User indicador = repository.findByCodigoIndicacao(codigoIndicacao)
-                    .orElseThrow(() -> new RegistroNaoEncontradoException("Código de indicação não encontrado"));
+            Optional<User> indicador = repository.findByCodigoIndicacao(codigoIndicacao);
 
-            // Cria indicação direta (nível 1)
-            Indicacao indicacaoNivel1 = new Indicacao();
-            indicacaoNivel1.setUsuario(usuario);
-            indicacaoNivel1.setUsuarioIndicador(indicador);
-            indicacaoNivel1.setNivel(1);
-            indicacaoService.save(indicacaoNivel1);
+            if(indicador.isPresent()){
+                User nivel1User = indicador.get();
+                // Cria indicação direta (nível 1)
+                Indicacao indicacaoNivel1 = new Indicacao();
+                indicacaoNivel1.setUsuario(usuario);
+                indicacaoNivel1.setUsuarioIndicador(nivel1User);
+                indicacaoNivel1.setNivel(1);
+                indicacaoService.save(indicacaoNivel1);
+                nivel1User.setQtdIndicacoesDiretas(nivel1User.getQtdIndicacoesDiretas() + 1);
+                repository.save(nivel1User);
 
-            // Busca indicador do indicador (para nível 2)
-            Optional<Indicacao> indicacaoNivel1DoIndicador = indicacaoService
-                    .findByUsuario(indicador);
-
-            if (indicacaoNivel1DoIndicador.isPresent()) {
-                // Cria indicação nível 2
-                Indicacao indicacaoNivel2 = new Indicacao();
-                indicacaoNivel2.setUsuario(usuario);
-                indicacaoNivel2.setUsuarioIndicador(indicacaoNivel1DoIndicador.get().getUsuarioIndicador());
-                indicacaoNivel2.setNivel(2);
-                indicacaoService.save(indicacaoNivel2);
-
-                // Busca indicador nível 3
-                Optional<Indicacao> indicacaoNivel2DoIndicador = indicacaoService
-                        .findByUsuario(indicacaoNivel1DoIndicador.get().getUsuarioIndicador());
-
-                if (indicacaoNivel2DoIndicador.isPresent()) {
-                    // Cria indicação nível 3
-                    Indicacao indicacaoNivel3 = new Indicacao();
-                    indicacaoNivel3.setUsuario(usuario);
-                    indicacaoNivel3.setUsuarioIndicador(indicacaoNivel2DoIndicador.get().getUsuarioIndicador());
-                    indicacaoNivel3.setNivel(3);
-                    indicacaoService.save(indicacaoNivel3);
-                }
+                addIndicacaoNvl2(usuario, codigoIndicacao, nivel1User);
             }
         } catch (Exception e) {
             log.error("Erro ao criar indicações: " + e.getMessage());
-        } catch (RegistroNaoEncontradoException e) {
-            throw new RuntimeException(e);
+        }
+    }
+
+    private void addIndicacaoNvl2(User usuario, String codigoIndicacao, User nivel1User) {
+        if(StringUtils.isNotEmpty(nivel1User.getCodigoIndicacao())){
+            // Busca indicador do indicador (para nível 2)
+            Optional<Indicacao> nvl2 = indicacaoService.findFirstIndicadorByNivelAndUsuario(1, nivel1User);
+            if(nvl2.isPresent()){
+
+                User userNivel2 = nvl2.get().getUsuarioIndicador();
+
+                if (userNivel2 != null) {
+                    // Cria indicação nível 2
+                    Indicacao indicacaoNivel2 = new Indicacao();
+                    indicacaoNivel2.setUsuario(usuario);
+                    indicacaoNivel2.setUsuarioIndicador(userNivel2);
+                    indicacaoNivel2.setNivel(2);
+                    indicacaoService.save(indicacaoNivel2);
+                    userNivel2.setQtdIndicacoesIndiretas(userNivel2.getQtdIndicacoesIndiretas() + 1);
+                    repository.save(userNivel2);
+
+                    addIndicacaoNVL3(usuario, codigoIndicacao, userNivel2);
+                }
+            }
+        }
+    }
+
+    private void addIndicacaoNVL3(User usuario, String codigoIndicacao, User userNivel2) {
+        if(StringUtils.isNotEmpty(userNivel2.getCodigoIndicacao())){
+            // Busca indicador do indicador (para nível 2)
+            Optional<Indicacao> nvl3 = indicacaoService.findFirstIndicadorByNivelAndUsuario(1, userNivel2);
+            if(nvl3.isPresent()){
+
+                User userNivel3 = nvl3.get().getUsuarioIndicador();
+
+                if (userNivel3 != null) {
+                    // Cria indicação nível 2
+                    Indicacao indicacaoNivel3 = new Indicacao();
+                    indicacaoNivel3.setUsuario(usuario);
+                    indicacaoNivel3.setUsuarioIndicador(userNivel3);
+                    indicacaoNivel3.setNivel(3);
+                    indicacaoService.save(indicacaoNivel3);
+                    userNivel3.setQtdIndicacoesIndiretas(userNivel3.getQtdIndicacoesIndiretas() + 1);
+                    repository.save(userNivel3);
+                }
+            }
         }
     }
 
@@ -278,7 +308,7 @@ public class UserService extends GenericService<User, Long> {
     private void authenticateUser(LoginDTO input) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        input.getEmail(),
+                        input.getEmail().toLowerCase(),
                         input.getPassword()
                 )
         );

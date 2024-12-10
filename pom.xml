@@ -30,6 +30,17 @@
 	</properties>
 
 	<dependencies>
+
+		<dependency>
+			<groupId>jakarta.mail</groupId>
+			<artifactId>jakarta.mail-api</artifactId>
+			<version>2.1.1</version>
+		</dependency>
+		<dependency>
+			<groupId>org.eclipse.angus</groupId>
+			<artifactId>jakarta.mail</artifactId>
+			<version>2.0.1</version>
+		</dependency>
 		<!-- ModelMapper -->
 		<dependency>
 			<groupId>org.modelmapper</groupId>

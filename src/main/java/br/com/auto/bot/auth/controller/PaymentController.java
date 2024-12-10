@@ -31,7 +31,7 @@ public class PaymentController {
 
     @PostMapping("/detpay-callback")
     public ResponseEntity<Void> handleCallback(@RequestBody PaymentCallBackDTO pagamento) {
-        //System.out.println(pagamento.toString());
+        System.out.println("Detpay Callback " + pagamento.toString());
         paymentGatewayService.processarPagamento(pagamento);
         return ResponseEntity.status(200).build();
     }

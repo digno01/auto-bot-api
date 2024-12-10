@@ -11,7 +11,7 @@ public class WithdrawalRequestDTO {
     @JsonProperty("receiver_name")
     private String receiverName;
     @JsonProperty("value_cents")
-    private Integer valueCents;
+    private BigDecimal valueCents;
     @JsonProperty("receiver_document")
     private String receiverDocument;
     @JsonProperty("pix_key")

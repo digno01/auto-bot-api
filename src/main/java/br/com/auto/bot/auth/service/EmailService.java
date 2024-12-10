@@ -7,9 +7,13 @@ import br.com.auto.bot.auth.model.User;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.MessageSource;
+import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 import org.thymeleaf.context.Context;
+
+import java.util.concurrent.CompletableFuture;
+
 @Service
 public class EmailService {
 
@@ -79,7 +83,7 @@ public class EmailService {
         emailUtil.setBody(body).send();
     }
 
-    public void enviarEmailComSenha(UserDTO user) {
+    /*public void enviarEmailComSenha(UserDTO user) {
         EmailUtil emailUtil = new EmailUtil();
         emailUtil.addAddressTO(user.getEmail());
         emailUtil.setSubject(messageSource.getMessage("MI004", null, null));
@@ -91,5 +95,22 @@ public class EmailService {
 
         String body = this.templateEngine.process("dadosParaContaMME", context);
         emailUtil.setBody(body).send();
-    }
+    }*/
+
+    @Async
+    public CompletableFuture<Void> enviarEmailComSenha(UserDTO user) {
+        return CompletableFuture.runAsync(() -> {
+            EmailUtil emailUtil = new EmailUtil();
+            emailUtil.addAddressTO(user.getEmail());
+            emailUtil.setSubject(messageSource.getMessage("MI004", null, null));
+
+            Context context = new Context(Util.LOCALE_BR);
+            context.setVariable("nome", user.getNome());
+            context.setVariable("usuario", user.getEmail());
+            context.setVariable("senha", user.getPassword());
+
+            String body = this.templateEngine.process("dadosParaContaMME", context);
+            emailUtil.setBody(body).send();
+        });
+        }
 }

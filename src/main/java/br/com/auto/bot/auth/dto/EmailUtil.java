@@ -3,39 +3,45 @@ package br.com.auto.bot.auth.dto;
 import br.com.auto.bot.auth.exceptions.EmailException;
 import br.com.auto.bot.auth.util.CollectionUtil;
 import br.com.auto.bot.auth.util.Util;
+import jakarta.activation.DataHandler;
+import jakarta.activation.MimetypesFileTypeMap;
+import jakarta.mail.Authenticator;
+import jakarta.mail.BodyPart;
+import jakarta.mail.Message;
+import jakarta.mail.MessagingException;
+import jakarta.mail.Multipart;
+import jakarta.mail.PasswordAuthentication;
+import jakarta.mail.Session;
+import jakarta.mail.Transport;
+import jakarta.mail.internet.AddressException;
+import jakarta.mail.internet.InternetAddress;
+import jakarta.mail.internet.MimeBodyPart;
+import jakarta.mail.internet.MimeMessage;
+import jakarta.mail.internet.MimeMultipart;
+import jakarta.mail.internet.MimeUtility;
+import jakarta.mail.util.ByteArrayDataSource;
 import org.apache.commons.lang3.StringUtils;
-import javax.mail.Multipart;
-import javax.mail.Session;
+
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.UnsupportedCharsetException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
-import java.util.List;
-import java.util.Map;
-import java.util.Properties;
-import java.util.ResourceBundle;
-import java.util.Set;
-import javax.activation.DataHandler;
-import javax.activation.MimetypesFileTypeMap;
-import javax.mail.Authenticator;
-import javax.mail.BodyPart;
-import javax.mail.Message;
-import javax.mail.MessagingException;
-import javax.mail.PasswordAuthentication;
-import javax.mail.Transport;
-import javax.mail.internet.AddressException;
-import javax.mail.internet.InternetAddress;
-import javax.mail.internet.MimeBodyPart;
-import javax.mail.internet.MimeMessage;
-import javax.mail.internet.MimeMultipart;
-import javax.mail.internet.MimeUtility;
-import javax.mail.util.ByteArrayDataSource;
+import java.util.*;
+
 public class EmailUtil {
 
-    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("email-config");
+//    private static final ResourceBundle RESOURCE_BUNDLE = ResourceBundle.getBundle("email-config");
+
+    private static final ResourceBundle RESOURCE_BUNDLE;
+
+    static {
+        try {
+            RESOURCE_BUNDLE = ResourceBundle.getBundle("email-config");
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("Não foi possível carregar email-config.properties: " + e.getMessage());
+        }
+    }
+
     private static final String USER_NAME = RESOURCE_BUNDLE.getString("mail.user");
     private static final String PASSWORD = RESOURCE_BUNDLE.getString("mail.password");
     private static final String HOST_NAME = RESOURCE_BUNDLE.getString("mail.host");
@@ -58,7 +64,7 @@ public class EmailUtil {
      * Constructor classe.
      */
     public EmailUtil() {
-        this.attachments = new HashMap<String, byte[]>();
+        this.attachments = new HashMap<>();
         this.attachmentsImage = new HashMap<String, byte[]>();
         this.addressesTO = new LinkedHashSet<>();
         this.addressesCC = new LinkedHashSet<String>();
@@ -383,15 +389,6 @@ public class EmailUtil {
         return part;
     }
 
-    /**
-     * Returns an instance of {@link MimeBodyPart} according to the given
-     * parameters.
-     *
-     * @param cid
-     * @param data
-     * @return
-     * @throws MessagingException
-     */
     private MimeBodyPart getAttachmentImagePart(String cid, byte[] data) throws MessagingException {
         MimetypesFileTypeMap mimeTypes = new MimetypesFileTypeMap();
         ByteArrayDataSource dataSource = new ByteArrayDataSource(data, mimeTypes.getContentType(cid));
@@ -408,19 +405,33 @@ public class EmailUtil {
      *
      * @return
      */
+
     private Session getSession() {
         Properties properties = new Properties();
         properties.put("mail.smtp.host", HOST_NAME);
-        properties.put("mail.smtp.port", Integer.parseInt(SMTP_PORT));
-        properties.put("mail.smtp.auth", Boolean.TRUE.toString());
-        properties.put("mail.smtp.starttls.enable", Boolean.TRUE.toString());
+        properties.put("mail.smtp.port", SMTP_PORT);
+        properties.put("mail.smtp.auth", "true");
+        properties.put("mail.smtp.starttls.enable", "true");
+
+        // Adicione logs para debug
+        System.out.println("HOST: " + HOST_NAME);
+        System.out.println("PORT: " + SMTP_PORT);
+        System.out.println("USER: " + USER_NAME);
+        // Não logar a senha por segurança
 
         Authenticator auth = new Authenticator() {
-            public PasswordAuthentication getPasswordAuthentication() {
+            @Override
+            protected PasswordAuthentication getPasswordAuthentication() {
+                if (USER_NAME == null || PASSWORD == null) {
+                    throw new RuntimeException("Credenciais de email não configuradas corretamente");
+                }
                 return new PasswordAuthentication(USER_NAME, PASSWORD);
             }
         };
-        return Session.getInstance(properties, auth);
+
+        Session session = Session.getInstance(properties, auth);
+        session.setDebug(true);
+        return session;
     }
 
     /**

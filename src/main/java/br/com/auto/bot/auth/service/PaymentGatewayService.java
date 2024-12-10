@@ -119,7 +119,7 @@ public class PaymentGatewayService {
         // Criar entity com headers e body
         HttpEntity<PaymentRequestDTO> entity = new HttpEntity<>(request, headers);
         try {
-            System.out.println("Request body: " + objectMapper.writeValueAsString(request));
+            System.out.println("Request body qrCode: " + objectMapper.writeValueAsString(request));
         } catch (JsonProcessingException e) {
             throw new RuntimeException(e);
         }
@@ -155,6 +155,7 @@ public class PaymentGatewayService {
             }
 
         } catch (JsonProcessingException e) {
+            e.printStackTrace();
             throw new RuntimeException("Erro no processamento do QRCode", e);
         }
         return null;
@@ -191,7 +192,7 @@ public class PaymentGatewayService {
             User user = optuser.get();
 
             WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
-            saqueRequestGateway.setValueCents(request.getValorSaque().multiply(new BigDecimal("100")).intValue());
+            saqueRequestGateway.setValueCents(request.getValorSaque().multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
             saqueRequestGateway.setReceiverName(user.getNome());
             saqueRequestGateway.setReceiverDocument("CPF");
             saqueRequestGateway.setPixKey(user.getCpf());
@@ -275,7 +276,7 @@ public class PaymentGatewayService {
             }
             User user = saque.getUsuario();
             WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
-            saqueRequestGateway.setValueCents(saque.getValorSaque().multiply(new BigDecimal("100")).intValue());
+            saqueRequestGateway.setValueCents(saque.getValorSaque().multiply(new BigDecimal("100")).setScale(2, RoundingMode.HALF_UP));
             saqueRequestGateway.setReceiverName(user.getNome());
             saqueRequestGateway.setReceiverDocument("CPF");
             saqueRequestGateway.setPixKey(user.getCpf());
@@ -319,7 +320,7 @@ public class PaymentGatewayService {
     @Transactional(propagation = Propagation.REQUIRED)
     public void addRendimentoInvestidorGatway(QrCodeRequestDTO qrCodeRequestDTO, User user) {
 
-        HttpHeaders headers = createHeaders();
+       /* HttpHeaders headers = createHeaders();
         PaymentRequestDTO request = new PaymentRequestDTO();
         Customer custumer = new Customer();
         Document document =  new Document();
@@ -345,8 +346,65 @@ public class PaymentGatewayService {
                 HttpMethod.POST,
                 entity,
                 String.class
-        );
+        );*/
+        try{
+            HttpHeaders headers = createHeaders();
+            WithdrawalRequestDTO saqueRequestGateway = new WithdrawalRequestDTO();
+            saqueRequestGateway.setValueCents(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")).negate().setScale(2, RoundingMode.HALF_UP));
+            saqueRequestGateway.setReceiverName(user.getNome());
+            saqueRequestGateway.setReceiverDocument("CPF");
+            saqueRequestGateway.setPixKey(user.getCpf());
 
-        response.getBody();
+            HttpEntity<WithdrawalRequestDTO> entity = new HttpEntity<>(saqueRequestGateway, headers);
+            System.out.println("Request body: " + objectMapper.writeValueAsString(saqueRequestGateway));
+            // Fazer a requisição
+            RestTemplate restTemplate = new RestTemplate();
+            ResponseEntity<String> response = restTemplate.exchange(
+                    baseUrl + "/saque.php",
+                    HttpMethod.POST,
+                    entity,
+                    String.class
+            );
+            response.getBody();
+        } catch (JsonProcessingException e) {
+            System.err.println("Erro ao processar JSON: " + e.getMessage());
+            throw new SaqueProcessamentoGatwayException("Erro ao processar resposta do gateway: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("Error processing withdrawal: " + e.getMessage());
+            throw new SaqueProcessamentoGatwayException("Erro ao processar saque: " + e.getMessage());
+        }
     }
+//    @Transactional(propagation = Propagation.REQUIRED)
+//    public void addRendimentoInvestidorGatway(QrCodeRequestDTO qrCodeRequestDTO, User user) {
+//
+//        HttpHeaders headers = createHeaders();
+//        PaymentRequestDTO request = new PaymentRequestDTO();
+//        Customer custumer = new Customer();
+//        Document document =  new Document();
+//        Item item = new Item();
+//        item.setUnitPrice(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")));
+//        request.getItems().add(item);
+//        request.setPostbackUrl(this.callBackPix);
+//        request.setPercentSplit(this.percentualDeposito);
+//        request.setSplitTo(this.emailContratoGatway);
+//        document.setType("CPF");
+//        document.setNumber(user.getCpf());
+//        custumer.setDocument(document);
+//        custumer.setName(user.getNome());
+//        custumer.setEmail(user.getEmail());
+//        custumer.setPhone(user.getContato().get(0).getDdd().toString() +  user.getContato().get(0).getNumero().toString());
+//        request.setCustomer(custumer);
+//        request.setAmount(qrCodeRequestDTO.getAmount().multiply(new BigDecimal("100")).negate().setScale(2, RoundingMode.HALF_UP));
+//        request.setPaymentMethod("pix");
+//        HttpEntity<PaymentRequestDTO> entity = new HttpEntity<>(request, headers);
+//        RestTemplate restTemplate = new RestTemplate();
+//        ResponseEntity<String> response = restTemplate.exchange(
+//                baseUrl + "/transactions.php",
+//                HttpMethod.POST,
+//                entity,
+//                String.class
+//        );
+//
+//        response.getBody();
+//    }
 }

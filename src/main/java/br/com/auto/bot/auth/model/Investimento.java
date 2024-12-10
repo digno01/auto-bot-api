@@ -87,4 +87,13 @@ public class Investimento implements Serializable {
     protected void onUpdate() {
         dataAlteracao = LocalDateTime.now();
     }
+    public boolean isAptoParaReinvestimento() {
+        if (this.dataLiberacao == null || !this.isLiberadoSaque) {
+            return false;
+        }
+
+        LocalDateTime dataAtual = LocalDateTime.now();
+        return dataLiberacao.isBefore(dataAtual) || dataLiberacao.isEqual(dataAtual);
+    }
+
 }

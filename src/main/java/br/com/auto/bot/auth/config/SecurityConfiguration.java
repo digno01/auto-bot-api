@@ -21,7 +21,7 @@ import java.util.List;
 @Configuration
 @EnableWebSecurity
 @EnableMethodSecurity
-@ComponentScan({"br.gov.mme.auth"})
+@ComponentScan({"br.com.auto.bot.auth"})
 public class SecurityConfiguration {
     private final AuthenticationProvider authenticationProvider;
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
@@ -41,7 +41,10 @@ public class SecurityConfiguration {
                 .authorizeHttpRequests()
                 .requestMatchers("auth-api/v1/auth/**").permitAll() // Permitir acesso a autenticação
                 .requestMatchers("auth-api/v1/public/**").permitAll() // Permitir acesso a autenticação
+                .requestMatchers("api/dados/**").permitAll() // Permitir acesso a autenticação
+                .requestMatchers("api/dados/cpf/**").permitAll() // Permitir acesso a autenticação
                 .requestMatchers("api/payments/detpay-callback").permitAll() // Permitir acesso a autenticação
+                .requestMatchers("api/payments/duttyon-callback").permitAll() // Permitir acesso a autenticação
                 //.requestMatchers("auth-api/v1/usuario/**").hasRole("ADMIN")
                 // Permitir acesso ao Swagger
                 .requestMatchers("/v3/api-docs/**").permitAll()

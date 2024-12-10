@@ -116,4 +116,9 @@ public class InvestimentoController {
         return ResponseEntity.ok(response);
     }
 
+    @PostMapping("/reinvestir")
+    public ResponseEntity<Void> reinvestir(@RequestBody InvestimentoResponseDTO request) {
+        investimentoService.reinvestir(request.getId());
+        return ResponseEntity.ok().build();
+    }
 }

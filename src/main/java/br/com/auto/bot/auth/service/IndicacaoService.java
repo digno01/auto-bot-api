@@ -24,4 +24,8 @@ public class IndicacaoService {
     public Optional<Indicacao> findByUsuario(User usuario) {
         return repository.findByUsuarioAndIsActiveTrue(usuario);
     }
+
+    public Optional<Indicacao> findFirstIndicadorByNivelAndUsuario(int i, User user) {
+        return repository.findFirstIndicadorByNivelAndUsuario(i, user);
+    }
 }

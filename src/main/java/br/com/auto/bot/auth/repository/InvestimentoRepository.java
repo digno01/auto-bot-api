@@ -41,9 +41,9 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.usuario.id = :usuarioId " +
             "AND i.status IN ('A', 'PP') " +
-            "AND i.dataInvestimento <= :dataLimite " +
-            "AND i.dataLiberacao > :dataAtual " +
-            "AND i.saldoAtual >= i.roboInvestidor.valorInvestimentoMin")
+            "AND i.dataInvestimento <= :dataAtual " +
+            "AND i.dataLiberacao > :dataLimite " +
+            "AND i.valorEfetuadoPIX >= i.roboInvestidor.valorInvestimentoMin")
     List<Investimento> findAllInvestimentosAtivosComSaldoByUsuarioId(
             @Param("usuarioId") Long usuarioId,
             @Param("dataLimite") LocalDateTime dataLimite,
@@ -198,9 +198,25 @@ public interface InvestimentoRepository extends JpaRepository<Investimento, Long
 
     @Query("SELECT i FROM Investimento i " +
             "WHERE i.usuario.id = :userId " +
-            "AND i.isLiberadoSaque = true " +
+            //"AND i.isLiberadoSaque = true " +
             "AND i.status <> 'C' " +
             "AND i.saldoAtual > 0 order by i.dataInvestimento desc ")
     List<Investimento> listarRendimentos(@Param("userId") Long userId);
 
+
+    @Query("SELECT i FROM Investimento i WHERE i.usuario = :usuario")
+    List<Investimento> findByUsuario(@Param("usuario") User usuario);
+
+    Investimento findFirstByUsuarioOrderByDataInvestimentoAsc(User usuario);
+
+    @Query("SELECT COUNT(i), SUM(i.valorInicial), SUM(i.saldoAtual) " +
+            "FROM Investimento i WHERE i.usuario = :usuario")
+    Object[] getInvestimentosSummary(@Param("usuario") User usuario);
+
+
+    @Query("SELECT COUNT(i) FROM Investimento i WHERE i.valorEfetuadoPIX IS NOT NULL AND i.valorEfetuadoPIX > 0 AND i.usuario.id = :usuarioId")
+    Integer countPaidInvestimentosWithPixValueByUsuarioId(@Param("usuarioId") Long usuarioId);
+
+    @Query("SELECT SUM(i.valorEfetuadoPIX) FROM Investimento i WHERE i.valorEfetuadoPIX IS NOT NULL AND i.valorEfetuadoPIX > 0  AND i.usuario.id = :usuarioId")
+    BigDecimal sumValorPixPagosByUsuarioId(@Param("usuarioId") Long usuarioId);
 }

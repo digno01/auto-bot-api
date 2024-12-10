@@ -1,6 +1,7 @@
 package br.com.auto.bot.auth.controller;
 
-import br.com.auto.bot.auth.model.OperacaoCripto;
+import br.com.auto.bot.auth.dto.OperacaoCriptoDTO;
+import br.com.auto.bot.auth.mapper.OperacaoCriptoMapper;
 import br.com.auto.bot.auth.repository.OperacaoCriptoRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +13,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Tag(name = "Operações Cripto", description = "Endpoints para gerenciar operações de criptomoedas.")
 @RestController
@@ -21,6 +23,7 @@ import java.util.List;
 public class OperacaoCriptoController {
 
     private final OperacaoCriptoRepository operacaoCriptoRepository;
+    private final OperacaoCriptoMapper operacaoCriptoMapper;
 
     @Operation(summary = "Obter operações de rendimento", description = "Retorna uma lista de operações de criptomoedas associadas a um rendimento específico.")
     @ApiResponses(value = {
@@ -28,10 +31,13 @@ public class OperacaoCriptoController {
             @ApiResponse(responseCode = "404", description = "Rendimento não encontrado.")
     })
     @GetMapping("/rendimento/{rendimentoId}")
-    public ResponseEntity<List<OperacaoCripto>> getOperacoesRendimento(
+    public ResponseEntity<List<OperacaoCriptoDTO>> getOperacoesRendimento(
             @Parameter(description = "ID do rendimento para buscar operações associadas") @PathVariable Long rendimentoId) {
         return ResponseEntity.ok(
                 operacaoCriptoRepository.findByRendimentoId(rendimentoId)
+                        .stream()
+                        .map(operacaoCriptoMapper::toDTO)
+                        .collect(Collectors.toList())
         );
     }
 }

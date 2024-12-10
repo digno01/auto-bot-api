@@ -1,5 +1,6 @@
 package br.com.auto.bot.auth.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -17,5 +18,6 @@ public class IndicacaoDTO {
     private Long idUsuarioIndicador;
     private Integer nivel;
     private Boolean isActive;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime createdAt;
 }

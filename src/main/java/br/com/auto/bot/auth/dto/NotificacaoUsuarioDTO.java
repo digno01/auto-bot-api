@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.dto;
 
 import br.com.auto.bot.auth.enums.TipoNotificacao;
 import br.com.auto.bot.auth.model.NotificacaoUsuario;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -19,7 +20,9 @@ public class NotificacaoUsuarioDTO {
     private BigDecimal valorReferencia;
     private TipoNotificacao tipo;
     private Boolean lida;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataCriacao;
+    @JsonFormat(pattern = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'")
     private LocalDateTime dataLeitura;
 
     public static NotificacaoUsuarioDTO fromEntity(NotificacaoUsuario notificacao) {

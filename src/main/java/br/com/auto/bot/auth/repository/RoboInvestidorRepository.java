@@ -50,6 +50,10 @@ public interface RoboInvestidorRepository extends JpaRepository<RoboInvestidor, 
     List<RoboInvestidor> findRobosBasedOnNotification(@Param("idUsuario") Long idUsuario, @Param("tipoNotificacao") TipoNotificacao tipoNotificacao);
 
     Page<RoboInvestidor> findByNivelAndIsActiveTrue(Integer nivel, Pageable pageable);
+
+
+    @Query("SELECT r FROM RoboInvestidor r WHERE (r.nivel = 1 or r.nivel <= :nivelUsuario AND r.isActive = true)")
+    List<RoboInvestidor> findRobosByNivelMenorOuIgualAoNivelUsuario(Integer nivelUsuario);
 }
 
 

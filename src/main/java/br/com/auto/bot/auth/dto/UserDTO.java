@@ -2,6 +2,7 @@ package br.com.auto.bot.auth.dto;
 
 import br.com.auto.bot.auth.validation.cpf.IsValidCpf;
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.persistence.Column;
 import jakarta.validation.constraints.NotEmpty;
@@ -18,6 +19,7 @@ import java.util.Set;
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Schema(description = "Objeto de transferência de dados para User")
 public class UserDTO extends LoginDTO {
 

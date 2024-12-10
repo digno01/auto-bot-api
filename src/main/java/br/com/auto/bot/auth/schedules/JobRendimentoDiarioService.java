@@ -65,17 +65,18 @@ public class JobRendimentoDiarioService {
     @Transactional
 //    @Scheduled(cron = "0 */30 * * * *")
 //    @Scheduled(cron = "0 * * * * *")
-    @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 1:00
+//    @Scheduled(cron = "0 0 1 * * MON-FRI") // Segunda a Sexta às 1:00
+    @Scheduled(cron = "${cron.expression:0 0 1 * * *}")
     public void processarRendimentosDiarios() {
         log.info("Iniciando processamento de rendimentos diários: {}", LocalDateTime.now());
 
         LocalDateTime dataAtual = LocalDateTime.now();
 
         // Verifica se é dia útil
-        if (!Util.isDiaUtil(dataAtual.toLocalDate())) {
+       /* if (!Util.isDiaUtil(dataAtual.toLocalDate())) {
             log.info("Processamento ignorado: data atual não é dia útil");
             return;
-        }
+        }*/
 
         try {
             criptosDiarios = criptoService.buscarDadosCripto24h();
@@ -153,7 +154,7 @@ public class JobRendimentoDiarioService {
                 BigDecimal rendimentoBruto = saldoRendimentos.multiply(BigDecimal.valueOf(percentualDoDia))
                         .divide(BigDecimal.valueOf(100), 8, RoundingMode.HALF_DOWN);
 
-                addGatwaySaldoRendimento(usuario, rendimentoBruto, investimento.getRoboInvestidor().getId());
+                //addGatwaySaldoRendimento(usuario, rendimentoBruto, investimento.getRoboInvestidor().getId());
                 BigDecimal saldoAcumulado = investimento.getSaldoAtual().add(rendimentoBruto);
                 if (saldoAcumulado.compareTo(BigDecimal.ZERO) < 0) {
                     BigDecimal saldoEfetivo = saldoAcumulado;

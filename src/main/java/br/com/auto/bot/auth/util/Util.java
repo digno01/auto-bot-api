@@ -1,7 +1,6 @@
 package br.com.auto.bot.auth.util;
 
 import org.apache.commons.lang3.StringUtils;
-
 import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
@@ -19,10 +18,10 @@ import java.security.spec.KeySpec;
 import java.text.ParseException;
 import java.time.DayOfWeek;
 import java.time.LocalDate;
+import java.time.Year;
 import java.util.*;
 
 public final class Util {
-
     public static final String CELLPHONE_PATTERN = "(##) # ####-####";
 
     public static final int CELLPHONE_SIZE = 9;
@@ -40,11 +39,70 @@ public final class Util {
 
     private static final String SIM = "SIM";
 
-    /**
-     * Construtor privado para garantir o singleton.
-     */
-    private Util() {
+    private static Set<LocalDate> calculateHolidaysForYear(int year) {
+        Set<LocalDate> holidays = new HashSet<>();
 
+        // Fixed holidays
+        holidays.add(LocalDate.of(year, 1, 1));   // Ano Novo
+        holidays.add(LocalDate.of(year, 4, 21));  // Tiradentes
+        holidays.add(LocalDate.of(year, 5, 1));   // Dia do Trabalho
+        holidays.add(LocalDate.of(year, 9, 7));   // Independência
+        holidays.add(LocalDate.of(year, 10, 12)); // Nossa Senhora Aparecida
+        holidays.add(LocalDate.of(year, 11, 2));  // Finados
+        holidays.add(LocalDate.of(year, 11, 15)); // Proclamação da República
+        holidays.add(LocalDate.of(year, 12, 25)); // Natal
+
+        // Calculate Easter Sunday for the year
+        LocalDate easter = calculateEasterForYear(year);
+
+        // Calculate moving holidays based on Easter
+        holidays.add(easter.minusDays(47));  // Carnaval Segunda
+        holidays.add(easter.minusDays(46));  // Carnaval Terça
+        holidays.add(easter.minusDays(2));   // Sexta-feira Santa
+        holidays.add(easter.plusDays(60));   // Corpus Christi
+
+        return holidays;
+    }
+
+    private static LocalDate calculateEasterForYear(int year) {
+        // Meeus/Jones/Butcher algorithm
+        int a = year % 19;
+        int b = year / 100;
+        int c = year % 100;
+        int d = b / 4;
+        int e = b % 4;
+        int f = (b + 8) / 25;
+        int g = (b - f + 1) / 3;
+        int h = (19 * a + b - d - g + 15) % 30;
+        int i = c / 4;
+        int k = c % 4;
+        int l = (32 + 2 * e + 2 * i - h - k) % 7;
+        int m = (a + 11 * h + 22 * l) / 451;
+        int month = (h + l - 7 * m + 114) / 31;
+        int day = ((h + l - 7 * m + 114) % 31) + 1;
+
+        return LocalDate.of(year, month, day);
+    }
+
+    // Lazy initialization of holidays for current year
+    private static Set<LocalDate> FERIADOS_NACIONAIS;
+
+    private static Set<LocalDate> getFeriadosNacionais() {
+        if (FERIADOS_NACIONAIS == null) {
+            FERIADOS_NACIONAIS = calculateHolidaysForYear(Year.now().getValue());
+        }
+        return FERIADOS_NACIONAIS;
+    }
+
+    public static boolean isDiaUtil(LocalDate data) {
+        // Verifica se não é fim de semana
+        DayOfWeek diaDaSemana = data.getDayOfWeek();
+        if (diaDaSemana == DayOfWeek.SATURDAY || diaDaSemana == DayOfWeek.SUNDAY) {
+            return false;
+        }
+
+        // Verifica se não é feriado
+        return !getFeriadosNacionais().contains(data);
     }
 
     /**
@@ -199,35 +257,6 @@ public final class Util {
             valid = Boolean.FALSE;
         }
         return valid;
-    }
-
-
-    // Injetar um serviço de feriados ou criar uma lista estática
-    public static final Set<LocalDate> FERIADOS_NACIONAIS = new HashSet<>(Arrays.asList(
-            // 2024
-            LocalDate.of(2024, 1, 1),  // Ano Novo
-            LocalDate.of(2024, 2, 12), // Carnaval
-            LocalDate.of(2024, 2, 13), // Carnaval
-            LocalDate.of(2024, 3, 29), // Sexta-feira Santa
-            LocalDate.of(2024, 4, 21), // Tiradentes
-            LocalDate.of(2024, 5, 1),  // Dia do Trabalho
-            LocalDate.of(2024, 5, 30), // Corpus Christi
-            LocalDate.of(2024, 9, 7),  // Independência
-            LocalDate.of(2024, 10, 12),// Nossa Senhora Aparecida
-            LocalDate.of(2024, 11, 2), // Finados
-            LocalDate.of(2024, 11, 15),// Proclamação da República
-            LocalDate.of(2024, 12, 25) // Natal
-    ));
-
-    public static boolean isDiaUtil(LocalDate data) {
-        // Verifica se não é fim de semana
-        DayOfWeek diaDaSemana = data.getDayOfWeek();
-        if (diaDaSemana == DayOfWeek.SATURDAY || diaDaSemana == DayOfWeek.SUNDAY) {
-            return false;
-        }
-
-        // Verifica se não é feriado
-        return !FERIADOS_NACIONAIS.contains(data);
     }
 
 }

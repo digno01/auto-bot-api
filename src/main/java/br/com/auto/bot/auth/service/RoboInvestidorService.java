@@ -1,9 +1,12 @@
 package br.com.auto.bot.auth.service;
 
 import br.com.auto.bot.auth.enums.TipoNotificacao;
+import br.com.auto.bot.auth.exceptions.BusinessException;
 import br.com.auto.bot.auth.model.RoboInvestidor;
+import br.com.auto.bot.auth.model.User;
 import br.com.auto.bot.auth.repository.NotificacaoUsuarioRepository;
 import br.com.auto.bot.auth.repository.RoboInvestidorRepository;
+import br.com.auto.bot.auth.repository.UserRepository;
 import br.com.auto.bot.auth.util.ObterDadosUsuarioLogado;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -19,6 +22,8 @@ public class RoboInvestidorService {
 
     @Autowired
     private RoboInvestidorRepository repository;
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private NotificacaoUsuarioRepository notificacaoUsuarioRepository;
@@ -52,7 +57,10 @@ public class RoboInvestidorService {
     }
 
     public List<RoboInvestidor> getRobosInvestidorForUser() {
-        List<RoboInvestidor>  robos =  repository.findAll();
+        User usuario = userRepository.findById(ObterDadosUsuarioLogado.getUsuarioLogadoId())
+                .orElseThrow(() -> new BusinessException("Usuário não encontrado"));
+
+        List<RoboInvestidor>  robos =  repository.findRobosByNivelMenorOuIgualAoNivelUsuario(usuario.getNivelConta());
         Boolean contemInvestimentoAprovado = notificacaoUsuarioRepository.contemNotificacaoInvestimento(ObterDadosUsuarioLogado.getUsuarioLogadoId(), TipoNotificacao.INVESTIMENTO_PAGO);
         if (contemInvestimentoAprovado) {
             robos.removeIf(robo -> robo.getId().equals(1L)); // Remove o robô com ID 1
